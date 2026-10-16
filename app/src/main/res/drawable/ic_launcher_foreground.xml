@@ -4,23 +4,29 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Blue music document with a folded corner -->
+    <!-- Deep navy inset tile and subtle blue rim -->
     <path
-        android:fillColor="#1677FF"
-        android:pathData="M22,18 Q22,14 26,14 L57,14 L76,33 L76,82 Q76,87 71,87 L26,87 Q22,87 22,83 Z" />
+        android:fillColor="#06152B"
+        android:strokeColor="#244C82"
+        android:strokeWidth="1.8"
+        android:pathData="M28,8 L80,8 Q100,8 100,28 L100,80 Q100,100 80,100 L28,100 Q8,100 8,80 L8,28 Q8,8 28,8 Z" />
+    <!-- White music document with a folded corner -->
     <path
-        android:fillColor="#8FC5FF"
-        android:pathData="M57,14 L57,28 Q57,33 62,33 L76,33 Z" />
-    <!-- Music note -->
+        android:fillColor="#F8FBFF"
+        android:pathData="M24,24 Q24,20 29,20 L56,20 L73,37 L73,79 Q73,84 68,84 L29,84 Q24,84 24,79 Z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M37,43 L54,38 Q57,37 57,41 L57,62 Q57,68 51,71 Q44,74 41,68 Q39,63 45,60 Q48,59 51,60 L51,47 L41,50 L41,69 Q41,75 35,78 Q28,81 25,75 Q23,70 29,67 Q32,66 35,67 L35,46 Q35,44 37,43 Z" />
-    <!-- Conversion arrow -->
+        android:fillColor="#B8D5FF"
+        android:pathData="M56,20 L56,33 Q56,37 61,37 L73,37 Z" />
+    <!-- Blue music note -->
     <path
-        android:fillColor="#00C2FF"
-        android:pathData="M57,39 L72,39 L72,31 Q72,27 76,30 L91,43 Q94,45 91,48 L76,61 Q72,64 72,59 L72,52 L57,52 Q51,52 51,46 Q51,39 57,39 Z" />
+        android:fillColor="#075BFF"
+        android:pathData="M38,46 L52,42 Q55,41 55,44 L55,62 Q55,68 49,70 Q43,72 40,67 Q38,62 44,60 Q47,59 49,60 L49,49 L41,51 L41,68 Q41,74 35,76 Q29,78 26,73 Q24,68 30,66 Q33,65 35,66 L35,48 Q35,46 38,46 Z" />
+    <!-- Cyan conversion arrow -->
+    <path
+        android:fillColor="#00D0F5"
+        android:pathData="M58,40 L71,40 L71,33 Q71,29 75,32 L89,44 Q92,46 89,49 L75,61 Q71,64 71,59 L71,53 L58,53 Q52,53 52,47 Q52,40 58,40 Z" />
     <!-- Audio waveform -->
     <path
-        android:fillColor="#00C2FF"
-        android:pathData="M58,67 Q58,64 61,64 Q64,64 64,67 L64,79 Q64,82 61,82 Q58,82 58,79 Z M67,59 Q67,56 70,56 Q73,56 73,59 L73,86 Q73,89 70,89 Q67,89 67,86 Z M76,65 Q76,62 79,62 Q82,62 82,65 L82,80 Q82,83 79,83 Q76,83 76,80 Z M85,70 Q85,67 88,67 Q91,67 91,70 L91,76 Q91,79 88,79 Q85,79 85,76 Z" />
+        android:fillColor="#00D0F5"
+        android:pathData="M59,67 Q59,64 62,64 Q65,64 65,67 L65,78 Q65,81 62,81 Q59,81 59,78 Z M68,59 Q68,56 71,56 Q74,56 74,59 L74,84 Q74,87 71,87 Q68,87 68,84 Z M77,65 Q77,62 80,62 Q83,62 83,65 L83,79 Q83,82 80,82 Q77,82 77,79 Z M86,70 Q86,67 89,67 Q92,67 92,70 L92,75 Q92,78 89,78 Q86,78 86,75 Z" />
 </vector>
