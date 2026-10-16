@@ -10,6 +10,7 @@ import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -112,21 +113,20 @@ private enum class ThemeMode(val title: String) {
     SYSTEM("跟随系统"), LIGHT("浅色"), DARK("深色"), SCHEDULED("定时切换")
 }
 private enum class AppLanguage(val title: String) {
-    SYSTEM("跟随系统 / System default"), EN_US("English (United States)"),
-    ZH_HK("繁體中文（香港）"), ZH_TW("繁體中文（台灣）")
+    SYSTEM("跟随系统 / System default"), ZH_CN("简体中文（中国）"),
+    EN_US("English (United States)"), ZH_HK("繁體中文（香港）")
 }
 private val LocalAppLanguage = staticCompositionLocalOf { AppLanguage.SYSTEM }
 private fun resolveLanguage(mode: AppLanguage): String = when (mode) {
+    AppLanguage.ZH_CN -> "zh"
     AppLanguage.EN_US -> "en"
     AppLanguage.ZH_HK -> "hk"
-    AppLanguage.ZH_TW -> "tw"
     AppLanguage.SYSTEM -> {
         val locale = Locale.getDefault()
         when {
             locale.language.equals("en", true) -> "en"
             locale.country.equals("HK", true) -> "hk"
-            locale.country.equals("TW", true) -> "tw"
-            locale.language.equals("zh", true) && locale.script.equals("Hant", true) -> "tw"
+            locale.language.equals("zh", true) && locale.script.equals("Hant", true) -> "hk"
             else -> "zh"
         }
     }
@@ -184,7 +184,7 @@ private fun Text(text: String, modifier: Modifier = Modifier,
     style: androidx.compose.ui.text.TextStyle = androidx.compose.material3.LocalTextStyle.current,
     color: Color = Color.Unspecified, fontWeight: FontWeight? = null,
     maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip) {
-    val index = when (resolveLanguage(LocalAppLanguage.current)) { "en" -> 1; "hk" -> 2; "tw" -> 3; else -> 0 }
+    val index = when (resolveLanguage(LocalAppLanguage.current)) { "en" -> 1; "hk" -> 2; else -> 0 }
     val translated = translations[text]?.get(index) ?: when {
         text.startsWith("正在转换：") && index == 1 -> "Converting: " + text.substringAfter("：")
         text.startsWith("正在转换：") && index in 2..3 -> "正在轉換：" + text.substringAfter("：")
@@ -326,6 +326,7 @@ private fun FxxkNcmApp() {
         )
     ) {
         CompositionLocalProvider(LocalAppLanguage provides languageMode) {
+        BackHandler(enabled = showSettings) { showSettings = false }
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Scaffold(topBar = {
                 TopAppBar(
