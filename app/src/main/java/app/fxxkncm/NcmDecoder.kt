@@ -71,16 +71,20 @@ object NcmDecoder {
         val buffer = ByteArray(BUFFER_SIZE)
         var extension = if (metadata.contains("\"format\"") && metadata.contains("flac", ignoreCase = true)) "flac" else "mp3"
         var firstChunk = true
+        var audioOffset = 0L
         while (true) {
             val count = source.read(buffer)
             if (count < 0) break
             if (count == 0) continue
             for (i in 0 until count) {
-                val j = (i + 1) and 0xff
-                val index = (keyBox[j].toInt() and 0xff) +
-                    (keyBox[((keyBox[j].toInt() and 0xff) + j) and 0xff].toInt() and 0xff)
+                // Use the absolute audio offset so short reads from document providers
+                // do not reset the NCM keystream at arbitrary chunk boundaries.
+                val position = ((audioOffset + i + 1L) and 0xff).toInt()
+                val keyByte = keyBox[position].toInt() and 0xff
+                val index = keyByte + (keyBox[(keyByte + position) and 0xff].toInt() and 0xff)
                 buffer[i] = (buffer[i].toInt() xor (keyBox[index and 0xff].toInt() and 0xff)).toByte()
             }
+            audioOffset += count
             if (firstChunk) {
                 if (count >= 4 && buffer[0] == 'f'.code.toByte() && buffer[1] == 'L'.code.toByte() &&
                     buffer[2] == 'a'.code.toByte() && buffer[3] == 'C'.code.toByte()) {
