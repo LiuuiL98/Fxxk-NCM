@@ -161,7 +161,7 @@ private fun FxxkNcmApp() {
     SideEffect {
         val window = (context as? ComponentActivity)?.window
         if (window != null) {
-            window.statusBarColor = (if (darkTheme) Color(0xFF121318) else Color(0xFFF8F8FC)).toArgb()
+            window.statusBarColor = MaterialTheme.colorScheme.background.toArgb()
             val flags = window.decorView.systemUiVisibility
             window.decorView.systemUiVisibility = if (darkTheme) {
                 flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
