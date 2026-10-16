@@ -434,7 +434,11 @@ private fun queryDisplayName(resolver: ContentResolver, uri: Uri): String? {
 private fun convertOne(resolver: ContentResolver, inputUri: Uri, treeUri: Uri, originalName: String): String {
     val safeBase = originalName.substringBeforeLast('.', originalName).ifBlank { "audio" }
     val initialName = "$safeBase.mp3"
-    val created = DocumentsContract.createDocument(resolver, treeUri, "audio/mpeg", initialName)
+    // OpenDocumentTree returns a tree URI, not a document URI. Convert it to
+    // the actual selected directory document URI before calling createDocument.
+    val parentDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
+    val parentDocumentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, parentDocumentId)
+    val created = DocumentsContract.createDocument(resolver, parentDocumentUri, "audio/mpeg", initialName)
         ?: throw IOException("无法在所选目录创建输出文件")
     try {
         val input = resolver.openInputStream(inputUri) ?: throw IOException("无法读取输入文件")
@@ -442,7 +446,6 @@ private fun convertOne(resolver: ContentResolver, inputUri: Uri, treeUri: Uri, o
         val result = input.use { src -> output.use { dst -> NcmDecoder.decode(src, dst) } }
         if (result.extension == "flac" && !initialName.endsWith(".flac", true)) {
             // SAF providers do not reliably support renaming every document; keep output safe and clear.
-            val parent = DocumentsContract.getTreeDocumentId(treeUri)
             val renamed = runCatching {
                 DocumentsContract.renameDocument(resolver, created, "$safeBase.flac")
             }.getOrNull()
