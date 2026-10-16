@@ -60,11 +60,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.Text as MaterialText
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,6 +91,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Calendar
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,6 +109,71 @@ private data class QueueItem(
 
 private enum class ThemeMode(val title: String) {
     SYSTEM("跟随系统"), LIGHT("浅色"), DARK("深色"), SCHEDULED("定时切换")
+}
+private enum class AppLanguage(val title: String) {
+    SYSTEM("跟随系统 / System default"), EN_US("English (United States)"),
+    ZH_HK("繁體中文（香港）"), ZH_TW("繁體中文（台灣）")
+}
+private val LocalAppLanguage = staticCompositionLocalOf { AppLanguage.SYSTEM }
+private fun resolveLanguage(mode: AppLanguage): String = when (mode) {
+    AppLanguage.EN_US -> "en"
+    AppLanguage.ZH_HK -> "hk"
+    AppLanguage.ZH_TW -> "tw"
+    AppLanguage.SYSTEM -> {
+        val locale = Locale.getDefault()
+        when {
+            locale.language.equals("en", true) -> "en"
+            locale.country.equals("HK", true) -> "hk"
+            locale.country.equals("TW", true) -> "tw"
+            locale.language.equals("zh", true) && locale.script.equals("Hant", true) -> "tw"
+            else -> "zh"
+        }
+    }
+}
+private val translations = mapOf(
+    "设置" to listOf("设置", "Settings", "設定", "設定"),
+    "音频转换工作台" to listOf("音频转换工作台", "Audio Converter", "音訊轉換工作台", "音訊轉換工作台"),
+    "转换设置" to listOf("转换设置", "Conversion", "轉換設定", "轉換設定"),
+    "输入目录" to listOf("输入目录", "Input folder", "輸入資料夾", "輸入資料夾"),
+    "选择目录" to listOf("选择目录", "Choose folder", "選擇資料夾", "選擇資料夾"),
+    "输出目录" to listOf("输出目录", "Output folder", "輸出資料夾", "輸出資料夾"),
+    "任务队列" to listOf("任务队列", "Queue", "工作佇列", "工作佇列"),
+    "清空" to listOf("清空", "Clear", "清除", "清除"),
+    "这里还很安静" to listOf("这里还很安静", "Nothing here yet", "這裡還沒有內容", "這裡還沒有內容"),
+    "开始转换" to listOf("开始转换", "Start conversion", "開始轉換", "開始轉換"),
+    "把音乐还给你" to listOf("把音乐还给你", "Your music, restored", "把音樂還給你", "把音樂還給你"),
+    "本地处理 · 目录扫描 · 批量转换" to listOf("本地处理 · 目录扫描 · 批量转换", "Local processing · Folder scan · Batch conversion", "本機處理 · 資料夾掃描 · 批次轉換", "本機處理 · 資料夾掃描 · 批次轉換"),
+    "输出已就绪" to listOf("输出已就绪", "Output ready", "輸出已就緒", "輸出已就緒"),
+    "等待设置目录" to listOf("等待设置目录", "Choose output folder", "等待設定資料夾", "等待設定資料夾"),
+    "外观模式" to listOf("外观模式", "Appearance", "外觀模式", "外觀模式"),
+    "跟随系统" to listOf("跟随系统", "Follow system", "跟隨系統", "跟隨系統"),
+    "浅色" to listOf("浅色", "Light", "淺色", "淺色"),
+    "深色" to listOf("深色", "Dark", "深色", "深色"),
+    "定时切换" to listOf("定时切换", "Scheduled", "定時切換", "定時切換"),
+    "深色模式时段" to listOf("深色模式时段", "Dark mode schedule", "深色模式時段", "深色模式時段"),
+    "语言" to listOf("语言", "Language", "語言", "語言"),
+    "自动跟随系统语言" to listOf("自动跟随系统语言", "Follow system language automatically", "自動跟隨系統語言", "自動跟隨系統語言"),
+    "选择包含 NCM 文件的文件夹" to listOf("选择包含 NCM 文件的文件夹", "Choose a folder containing NCM files", "選擇包含 NCM 檔案的資料夾", "選擇包含 NCM 檔案的資料夾"),
+    "未设置保存位置" to listOf("未设置保存位置", "No output location selected", "尚未設定儲存位置", "尚未設定儲存位置"),
+    "已选择保存位置" to listOf("已选择保存位置", "Output location selected", "已選擇儲存位置", "已選擇儲存位置"),
+    "选择目录后，符合条件的 NCM 文件会自动加入队列。" to listOf("选择目录后，符合条件的 NCM 文件会自动加入队列。", "Choose a folder to add matching NCM files to the queue.", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。"),
+    "完成" to listOf("完成", "Done", "完成", "完成"),
+    "返回" to listOf("返回", "Back", "返回", "返回")
+)
+@Composable
+private fun Text(text: String, modifier: Modifier = Modifier,
+    style: androidx.compose.ui.text.TextStyle = androidx.compose.material3.LocalTextStyle.current,
+    color: Color = Color.Unspecified, fontWeight: FontWeight? = null,
+    maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip) {
+    val index = when (resolveLanguage(LocalAppLanguage.current)) { "en" -> 1; "hk" -> 2; "tw" -> 3; else -> 0 }
+    val translated = translations[text]?.get(index) ?: when {
+        text.startsWith("正在转换：") && index == 1 -> "Converting: " + text.substringAfter("：")
+        text.startsWith("正在转换：") && index in 2..3 -> "正在轉換：" + text.substringAfter("：")
+        text.startsWith("扫描目录失败：") && index == 1 -> "Folder scan failed: " + text.substringAfter("：")
+        else -> text
+    }
+    MaterialText(translated, modifier = modifier, style = style, color = color,
+        fontWeight = fontWeight, maxLines = maxLines, overflow = overflow)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,6 +193,7 @@ private fun FxxkNcmApp() {
     var total by remember { mutableStateOf(0) }
     var statusMessage by remember { mutableStateOf("选择输入目录，应用只会处理其中的 .ncm 文件。") }
     var showSettings by remember { mutableStateOf(false) }
+    var languageMode by remember { mutableStateOf(runCatching { AppLanguage.valueOf(prefs.getString("language", "SYSTEM") ?: "SYSTEM") }.getOrDefault(AppLanguage.SYSTEM)) }
     var themeMode by remember { mutableStateOf(ThemeMode.valueOf(prefs.getString("mode", "SYSTEM") ?: "SYSTEM")) }
     var darkStart by remember { mutableStateOf(prefs.getInt("darkStart", 22 * 60)) }
     var lightStart by remember { mutableStateOf(prefs.getInt("lightStart", 7 * 60)) }
