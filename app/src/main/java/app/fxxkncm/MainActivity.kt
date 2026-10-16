@@ -51,6 +51,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -104,6 +105,7 @@ private enum class ThemeMode(val title: String) {
     SYSTEM("跟随系统"), LIGHT("浅色"), DARK("深色"), SCHEDULED("定时切换")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FxxkNcmApp() {
     val context = LocalContext.current
