@@ -25,6 +25,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+      - name: Generate complete PNG launcher icon
+        run: |
+          python3 -m pip install --user --quiet pillow
+          python3 .github/scripts/generate_launcher_icon.py
       - name: Run unit tests and build APKs
         run: gradle --no-daemon testDebugUnitTest assembleDebug assembleRelease
       - name: Report APK sizes
