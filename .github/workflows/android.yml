@@ -27,6 +27,40 @@ jobs:
           gradle-version: "8.9"
       - name: Run unit tests and build APKs
         run: gradle --no-daemon testDebugUnitTest assembleDebug assembleRelease
+      - name: Sign diagnostic Release APK with Android apksigner
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [[ -z "$SDK_ROOT" ]]; then
+            echo "ANDROID_HOME/ANDROID_SDK_ROOT is not set"
+            exit 1
+          fi
+          BUILD_TOOLS="$(find "$SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)"
+          APKSIGNER="$SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner"
+          DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
+          INPUT_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          OUTPUT_APK="app/build/outputs/apk/release/Fxxk-NCM-0.2.1-release-debug-signed.apk"
+
+          test -x "$APKSIGNER"
+          test -f "$DEBUG_KEYSTORE"
+          test -f "$INPUT_APK"
+
+          "$APKSIGNER" sign \
+            --ks "$DEBUG_KEYSTORE" \
+            --ks-key-alias androiddebugkey \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "$OUTPUT_APK" \
+            "$INPUT_APK"
+
+          "$APKSIGNER" verify --verbose --print-certs "$OUTPUT_APK"
+          "$SDK_ROOT/build-tools/$BUILD_TOOLS/zipalign" -c -v 4 "$OUTPUT_APK"
+          sha256sum "$OUTPUT_APK"
+          ls -lh "$OUTPUT_APK"
       - name: Report APK sizes
         run: |
           ls -lh app/build/outputs/apk/debug/app-debug.apk
@@ -42,4 +76,10 @@ jobs:
         with:
           name: Fxxk-NCM-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+      - name: Upload diagnostic signed Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fxxk-NCM-release-debug-signed-diagnostic
+          path: app/build/outputs/apk/release/Fxxk-NCM-0.2.1-release-debug-signed.apk
           if-no-files-found: error
