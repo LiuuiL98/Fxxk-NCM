@@ -170,7 +170,7 @@ object NcmDecoder {
 
     private fun readLength(input: InputStream, max: Int, label: String): Int {
         val value = readLittleEndianInt(input)
-        if (value < 0 || value > max) throw IllegalArgumentException("NCM $label长度异常")
+        if (value < 0 || value > max) throw IllegalArgumentException("NCM ${label}长度异常")
         return value
     }
 
