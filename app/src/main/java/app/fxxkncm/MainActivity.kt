@@ -37,6 +37,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.FolderOpen
@@ -292,24 +293,46 @@ private fun FxxkNcmApp() {
             extraLarge = RoundedCornerShape(32.dp)
         )
     ) {
+        CompositionLocalProvider(LocalAppLanguage provides languageMode) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Scaffold(topBar = {
                 TopAppBar(
+                    navigationIcon = {
+                        if (showSettings) androidx.compose.material3.IconButton(onClick = { showSettings = false }) {
+                            Icon(Icons.Rounded.ArrowBack, contentDescription = "返回")
+                        }
+                    },
                     title = {
                         Column {
-                            Text("Fxxk-NCM", fontWeight = FontWeight.Bold)
-                            Text("音频转换工作台", style = MaterialTheme.typography.labelMedium,
+                            Text(if (showSettings) "设置" else "Fxxk-NCM", fontWeight = FontWeight.Bold)
+                            if (!showSettings) Text("音频转换工作台", style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     },
                     actions = {
-                        androidx.compose.material3.IconButton(onClick = { showSettings = true }) {
+                        if (!showSettings) androidx.compose.material3.IconButton(onClick = { showSettings = true }) {
                             Icon(Icons.Rounded.Settings, contentDescription = "设置")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
                 )
             }) { insets ->
+                if (showSettings) {
+                    SettingsScreen(
+                        modifier = Modifier.fillMaxSize().padding(insets),
+                        themeMode = themeMode,
+                        languageMode = languageMode,
+                        darkStart = darkStart,
+                        lightStart = lightStart,
+                        onThemeChange = { themeMode = it; persistTheme() },
+                        onLanguageChange = {
+                            languageMode = it
+                            prefs.edit().putString("language", it.name).apply()
+                        },
+                        onDarkStartChange = { darkStart = it; persistTheme() },
+                        onLightStartChange = { lightStart = it; persistTheme() }
+                    )
+                } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(insets),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -442,48 +465,110 @@ private fun FxxkNcmApp() {
                             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                }
             }
+        }
         }
     }
 
-    if (showSettings) {
-        AlertDialog(
-            onDismissRequest = { showSettings = false },
-            title = { Text("设置") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("外观模式", style = MaterialTheme.typography.titleSmall)
+
+
+
+@Composable
+private fun SettingsScreen(
+    modifier: Modifier,
+    themeMode: ThemeMode,
+    languageMode: AppLanguage,
+    darkStart: Int,
+    lightStart: Int,
+    onThemeChange: (ThemeMode) -> Unit,
+    onLanguageChange: (AppLanguage) -> Unit,
+    onDarkStartChange: (Int) -> Unit,
+    onLightStartChange: (Int) -> Unit
+) {
+    val context = LocalContext.current
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 18.dp, top = 12.dp, end = 18.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("外观与语言", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("根据你的使用习惯自定义应用外观和显示语言。",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shape = RoundedCornerShape(24.dp)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Settings, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.size(10.dp))
+                        Column {
+                            Text("颜色与主题", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("浅色、深色或跟随系统自动切换",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     ThemeMode.values().forEach { mode ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = themeMode == mode, onClick = {
-                                themeMode = mode
-                                persistTheme()
-                            })
-                            Text(mode.title, modifier = Modifier.padding(start = 4.dp))
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                .background(if (themeMode == mode) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = themeMode == mode, onClick = { onThemeChange(mode) })
+                            Text(mode.title, modifier = Modifier.padding(start = 6.dp))
                         }
                     }
                     if (themeMode == ThemeMode.SCHEDULED) {
-                        Divider(Modifier.padding(vertical = 8.dp))
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
                         Text("深色模式时段", style = MaterialTheme.typography.titleSmall)
-                        TextButton(onClick = {
-                            TimePickerDialog(context, { _, hour, minute ->
-                                darkStart = hour * 60 + minute
-                                persistTheme()
-                            }, darkStart / 60, darkStart % 60, true).show()
-                        }) { Text("切换为深色：${formatTime(darkStart)}") }
-                        TextButton(onClick = {
-                            TimePickerDialog(context, { _, hour, minute ->
-                                lightStart = hour * 60 + minute
-                                persistTheme()
-                            }, lightStart / 60, lightStart % 60, true).show()
-                        }) { Text("切换为浅色：${formatTime(lightStart)}") }
-                        Text("跨午夜时段也可用，例如 22:00 深色、07:00 浅色。",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(onClick = {
+                            TimePickerDialog(context, { _, h, m -> onDarkStartChange(h * 60 + m) },
+                                darkStart / 60, darkStart % 60, true).show()
+                        }, modifier = Modifier.fillMaxWidth()) { Text("切换为深色：${formatTime(darkStart)}") }
+                        OutlinedButton(onClick = {
+                            TimePickerDialog(context, { _, h, m -> onLightStartChange(h * 60 + m) },
+                                lightStart / 60, lightStart % 60, true).show()
+                        }, modifier = Modifier.fillMaxWidth()) { Text("切换为浅色：${formatTime(lightStart)}") }
                     }
                 }
-            },
-            confirmButton = { TextButton(onClick = { showSettings = false }) { Text("完成") } }
-        )
+            }
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shape = RoundedCornerShape(24.dp)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.GraphicEq, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.size(10.dp))
+                        Column {
+                            Text("语言", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("自动跟随系统语言，也可在此手动指定",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    AppLanguage.values().forEach { lang ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                .background(if (languageMode == lang) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = languageMode == lang, onClick = { onLanguageChange(lang) })
+                            Text(lang.title, modifier = Modifier.padding(start = 6.dp))
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Text("Fxxk-NCM · 仅在本机处理音频文件",
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
