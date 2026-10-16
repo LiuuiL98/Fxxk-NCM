@@ -32,7 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -164,10 +164,14 @@ private fun FxxkNcmApp() {
             }
             scope.launch {
                 statusMessage = "正在扫描目录中的 NCM 文件…"
-                val found = withContext(Dispatchers.IO) { listNcmFiles(resolver, uri) }
-                queue.addAll(found)
-                statusMessage = if (found.isEmpty()) "该目录下没有 .ncm 文件；其他文件已自动跳过。"
-                    else "扫描完成：找到 ${found.size} 个 NCM 文件，其他文件未加入队列。"
+                try {
+                    val found = withContext(Dispatchers.IO) { listNcmFiles(resolver, uri) }
+                    queue.addAll(found)
+                    statusMessage = if (found.isEmpty()) "该目录下没有 .ncm 文件；其他文件已自动跳过。"
+                        else "扫描完成：找到 ${found.size} 个 NCM 文件，其他文件未加入队列。"
+                } catch (e: Exception) {
+                    statusMessage = "扫描目录失败：${e.message ?: "请重新选择目录"}"
+                }
             }
         }
     }
@@ -284,11 +288,11 @@ private fun FxxkNcmApp() {
                             }
                         }
                     } else {
-                        items(queue, key = { it.uri.toString() }) { item ->
+                        itemsIndexed(queue, key = { _, item -> item.uri.toString() }) { index, item ->
                             androidx.compose.animation.AnimatedVisibility(
                                 visible = true, enter = fadeIn() + slideInVertically { it / 8 },
                                 exit = fadeOut() + slideOutVertically { it / 8 }
-                            ) { QueueRow(item, queue.indexOf(item) + 1) }
+                            ) { QueueRow(item, index + 1) }
                         }
                     }
                     item {
@@ -357,7 +361,7 @@ private fun FxxkNcmApp() {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("外观模式", style = MaterialTheme.typography.titleSmall)
-                    ThemeMode.entries.forEach { mode ->
+                    ThemeMode.values().forEach { mode ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(selected = themeMode == mode, onClick = {
                                 themeMode = mode
