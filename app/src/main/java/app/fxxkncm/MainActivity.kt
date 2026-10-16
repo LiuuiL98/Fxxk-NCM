@@ -158,10 +158,11 @@ private fun FxxkNcmApp() {
     }
 
     // Keep status-bar icon contrast in sync with the app theme.
+    val statusBarColor = MaterialTheme.colorScheme.background.toArgb()
     SideEffect {
         val window = (context as? ComponentActivity)?.window
         if (window != null) {
-            window.statusBarColor = MaterialTheme.colorScheme.background.toArgb()
+            window.statusBarColor = statusBarColor
             val flags = window.decorView.systemUiVisibility
             window.decorView.systemUiVisibility = if (darkTheme) {
                 flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
@@ -451,3 +452,103 @@ private fun listNcmFiles(resolver: ContentResolver, treeUri: Uri): List<QueueIte
     scanDirectory(DocumentsContract.getTreeDocumentId(treeUri))
     return result.sortedBy { it.name.lowercase() }
 }
+
+@Composable
+private fun HeroCard(fileCount: Int, outputReady: Boolean, progress: Float, isConverting: Boolean) {
+    Card(shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+        Box(Modifier.fillMaxWidth().background(Brush.linearGradient(
+            listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.secondaryContainer)
+        )).padding(22.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.GraphicEq, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    }
+                    Spacer(Modifier.size(12.dp))
+                    Column {
+                        Text("把音乐还给你", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text("NCM → MP3 / FLAC", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Text("本地处理 · 目录扫描 · 批量转换", style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatusPill("$fileCount 个文件")
+                    StatusPill(if (outputReady) "输出已就绪" else "等待设置目录")
+                }
+                AnimatedVisibility(visible = isConverting, enter = fadeIn() + slideInVertically(), exit = fadeOut()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                        Text("${(progress * 100).toInt()}% 完成", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusPill(text: String) {
+    Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), shape = CircleShape) {
+        Text(text, Modifier.padding(horizontal = 12.dp, vertical = 7.dp), style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun SectionTitle(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun QueueRow(item: QueueItem, index: Int) {
+    Card(shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+        Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+            }
+            Spacer(Modifier.size(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+                Text(item.detail ?: item.status, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (item.status == "失败") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.size(8.dp))
+            when (item.status) {
+                "已完成" -> Icon(Icons.Rounded.CheckCircle, "已完成", tint = MaterialTheme.colorScheme.primary)
+                "失败" -> Icon(Icons.Rounded.Warning, "失败", tint = MaterialTheme.colorScheme.error)
+                "转换中" -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                else -> Text(index.toString(), style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+private fun convertOne(resolver: ContentResolver, inputUri: Uri, treeUri: Uri, originalName: String): String {
+    val safeBase = originalName.substringBeforeLast('.', originalName).ifBlank { "audio" }
+    val temporaryName = "$safeBase.ncm-converting"
+    val parentId = DocumentsContract.getTreeDocumentId(treeUri)
+    val parentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, parentId)
+    val created = DocumentsContract.createDocument(resolver, parentUri, "application/octet-stream", temporaryName)
+        ?: throw IOException("无法在所选目录创建输出文件")
+    try {
+        val input = resolver.openInputStream(inputUri) ?: throw IOException("无法读取输入文件")
+        val output = resolver.openOutputStream(created, "wt") ?: throw IOException("无法写入输出文件")
+        val result = input.use { src -> output.use { dst -> NcmDecoder.decode(src, dst) } }
+        val finalName = "$safeBase.${result.extension}"
+        val renamed = runCatching { DocumentsContract.renameDocument(resolver, created, finalName) }.getOrNull()
+        if (renamed != null) return finalName
+        return "$temporaryName（内容格式：${result.extension}；文件管理器中可重命名）"
+    } catch (e: Exception) {
+        runCatching { DocumentsContract.deleteDocument(resolver, created) }
+        throw e
+    }
+}
+
