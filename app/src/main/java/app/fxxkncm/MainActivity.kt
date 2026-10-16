@@ -5,6 +5,7 @@ import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.provider.OpenableColumns
@@ -64,6 +65,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -76,6 +78,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -111,10 +114,11 @@ private fun FxxkNcmApp() {
     val context = LocalContext.current
     val resolver = context.contentResolver
     val prefs = remember { context.getSharedPreferences("appearance", 0) }
+    val pathPrefs = remember { context.getSharedPreferences("selected_paths", 0) }
     val scope = rememberCoroutineScope()
     val queue = remember { mutableStateListOf<QueueItem>() }
-    var inputTree by remember { mutableStateOf<Uri?>(null) }
-    var outputTree by remember { mutableStateOf<Uri?>(null) }
+    var inputTree by remember { mutableStateOf(pathPrefs.getString("input_tree", null)?.let(Uri::parse)) }
+    var outputTree by remember { mutableStateOf(pathPrefs.getString("output_tree", null)?.let(Uri::parse)) }
     var isConverting by remember { mutableStateOf(false) }
     var currentName by remember { mutableStateOf("") }
     var completed by remember { mutableStateOf(0) }
@@ -152,6 +156,20 @@ private fun FxxkNcmApp() {
         ThemeMode.DARK -> true
         ThemeMode.SCHEDULED -> scheduledDark
     }
+
+    // Keep status-bar icon contrast in sync with the app theme.
+    SideEffect {
+        val window = (context as? ComponentActivity)?.window
+        if (window != null) {
+            window.statusBarColor = (if (darkTheme) Color(0xFF121318) else Color(0xFFF8F8FC)).toArgb()
+            val flags = window.decorView.systemUiVisibility
+            window.decorView.systemUiVisibility = if (darkTheme) {
+                flags and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+            } else {
+                flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            }
+        }
+    }
     val progress by animateFloatAsState(
         targetValue = if (total == 0) 0f else completed.toFloat() / total,
         label = "conversion-progress"
@@ -160,6 +178,7 @@ private fun FxxkNcmApp() {
     val inputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             inputTree = uri
+            pathPrefs.edit().putString("input_tree", uri.toString()).apply()
             queue.clear()
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -180,7 +199,7 @@ private fun FxxkNcmApp() {
     val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             outputTree = uri
-            runCatching {
+            pathPrefs.edit().putString("output_tree", uri.toString()).apply()
                 context.contentResolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
@@ -244,7 +263,7 @@ private fun FxxkNcmApp() {
                                             else "已扫描 · ${queue.size} 个 NCM 文件",
                                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    OutlinedButton(onClick = { inputPicker.launch(null) }, enabled = !isConverting) {
+                                    OutlinedButton(onClick = { inputPicker.launch(inputTree) }, enabled = !isConverting) {
                                         Text("选择目录")
                                     }
                                 }
@@ -257,7 +276,7 @@ private fun FxxkNcmApp() {
                                         Text(if (outputTree == null) "未设置保存位置" else "已选择保存位置",
                                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    OutlinedButton(onClick = { outputPicker.launch(null) }, enabled = !isConverting) {
+                                    OutlinedButton(onClick = { outputPicker.launch(outputTree) }, enabled = !isConverting) {
                                         Text("选择目录")
                                     }
                                 }
