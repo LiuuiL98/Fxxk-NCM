@@ -21,6 +21,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -79,9 +81,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -327,6 +331,9 @@ private fun FxxkNcmApp() {
     ) {
         CompositionLocalProvider(LocalAppLanguage provides languageMode) {
         BackHandler(enabled = showSettings) { showSettings = false }
+        val settingsOffset by animateFloatAsState(if (showSettings) 0f else 24f, label = "settings-enter")
+        val homeOffset by animateFloatAsState(if (showSettings) (-24f) else 0f, label = "home-return")
+        val screenAlpha by animateFloatAsState(if (showSettings) 1f else 0.96f, label = "screen-fade")
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Scaffold(topBar = {
                 TopAppBar(
@@ -352,7 +359,7 @@ private fun FxxkNcmApp() {
             }) { insets ->
                 if (showSettings) {
                     SettingsScreen(
-                        modifier = Modifier.fillMaxSize().padding(insets),
+                        modifier = Modifier.fillMaxSize().padding(insets).offset(x = settingsOffset.dp).graphicsLayer { alpha = screenAlpha },
                         themeMode = themeMode,
                         languageMode = languageMode,
                         darkStart = darkStart,
@@ -367,7 +374,7 @@ private fun FxxkNcmApp() {
                     )
                 } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(insets),
+                    modifier = Modifier.fillMaxSize().padding(insets).offset(x = homeOffset.dp).graphicsLayer { alpha = screenAlpha },
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
                         start = 18.dp, end = 18.dp, top = 8.dp, bottom = 28.dp
                     ),
