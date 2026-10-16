@@ -189,6 +189,20 @@ private fun Text(text: String, modifier: Modifier = Modifier,
         text.startsWith("正在转换：") && index == 1 -> "Converting: " + text.substringAfter("：")
         text.startsWith("正在转换：") && index in 2..3 -> "正在轉換：" + text.substringAfter("：")
         text.startsWith("扫描目录失败：") && index == 1 -> "Folder scan failed: " + text.substringAfter("：")
+        text.startsWith("扫描目录失败：") && index in 2..3 -> "掃描資料夾失敗：" + text.substringAfter("：")
+        text.startsWith("已扫描 · ") && index == 1 -> "Scanned · " + text.substringAfter("· ").replace(" 个 NCM 文件", " NCM files")
+        text.startsWith("已扫描 · ") && index in 2..3 -> "已掃描 · " + text.substringAfter("· ").replace(" 个 NCM 文件", " 個 NCM 檔案")
+        text.startsWith("扫描完成：找到 ") && index == 1 -> text.replace("扫描完成：找到 ", "Scan complete: found ").replace(" 个 NCM 文件，其他文件未加入队列。", " NCM files. Other files were skipped.")
+        text.startsWith("扫描完成：找到 ") && index in 2..3 -> text.replace("扫描完成：找到 ", "掃描完成：找到 ").replace(" 个 NCM 文件，其他文件未加入队列。", " 個 NCM 檔案，其他檔案未加入佇列。")
+        text.startsWith("转换结束：成功 ") && index == 1 -> text.replace("转换结束：成功 ", "Conversion finished: ").replace("。", " succeeded.")
+        text.startsWith("转换结束：成功 ") && index in 2..3 -> text.replace("转换结束：成功 ", "轉換完成：成功 ")
+        text.matches(Regex("\\d+ 个文件")) && index == 1 -> text.replace(" 个文件", " files")
+        text.matches(Regex("\\d+ 个文件")) && index in 2..3 -> text.replace(" 个文件", " 個檔案")
+        text.endsWith("% 完成") && index == 1 -> text.replace("% 完成", "% complete")
+        text.startsWith("切换为深色：") && index == 1 -> "Switch to dark: " + text.substringAfter("：")
+        text.startsWith("切换为深色：") && index in 2..3 -> "切換為深色：" + text.substringAfter("：")
+        text.startsWith("切换为浅色：") && index == 1 -> "Switch to light: " + text.substringAfter("：")
+        text.startsWith("切换为浅色：") && index in 2..3 -> "切換為淺色：" + text.substringAfter("：")
         else -> text
     }
     MaterialText(translated, modifier = modifier, style = style, color = color,
@@ -361,7 +375,7 @@ private fun FxxkNcmApp() {
                     item {
                         HeroCard(queue.size, outputTree != null, progress, isConverting)
                     }
-                    item { SectionTitle("转换设置", "输入目录仅扫描当前层级的 .ncm 文件") }
+                    item { SectionTitle("转换设置", "输入目录会递归扫描子文件夹中的 .ncm 文件") }
                     item {
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                             shape = RoundedCornerShape(24.dp)) {
