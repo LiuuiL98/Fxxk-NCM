@@ -4,29 +4,17 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Deep navy inset tile and subtle blue rim -->
+    <!-- Flat double eighth-note mark; burgundy tones approximate the approved gradient -->
     <path
-        android:fillColor="#06152B"
-        android:strokeColor="#244C82"
-        android:strokeWidth="1.8"
-        android:pathData="M28,8 L80,8 Q100,8 100,28 L100,80 Q100,100 80,100 L28,100 Q8,100 8,80 L8,28 Q8,8 28,8 Z" />
-    <!-- White music document with a folded corner -->
+        android:fillColor="#A80032"
+        android:pathData="M35,28 L35,68 C31,66 26,67 22,70 C15,75 14,83 19,88 C24,93 33,91 38,86 C41,82 42,78 42,73 L42,46 L73,36 L73,65 C68,63 62,65 58,69 C52,74 52,82 57,87 C62,92 71,90 76,85 C79,81 80,77 80,72 L80,21 Z"/>
     <path
-        android:fillColor="#F8FBFF"
-        android:pathData="M24,24 Q24,20 29,20 L56,20 L73,37 L73,79 Q73,84 68,84 L29,84 Q24,84 24,79 Z" />
+        android:fillColor="#C2184B"
+        android:pathData="M35,28 L80,21 L80,34 L42,46 L42,58 L35,60 Z"/>
     <path
-        android:fillColor="#B8D5FF"
-        android:pathData="M56,20 L56,33 Q56,37 61,37 L73,37 Z" />
-    <!-- Blue music note -->
+        android:fillColor="#D72B55"
+        android:pathData="M35,28 L80,21 L80,29 L35,39 Z"/>
     <path
-        android:fillColor="#075BFF"
-        android:pathData="M38,46 L52,42 Q55,41 55,44 L55,62 Q55,68 49,70 Q43,72 40,67 Q38,62 44,60 Q47,59 49,60 L49,49 L41,51 L41,68 Q41,74 35,76 Q29,78 26,73 Q24,68 30,66 Q33,65 35,66 L35,48 Q35,46 38,46 Z" />
-    <!-- Cyan conversion arrow -->
-    <path
-        android:fillColor="#00D0F5"
-        android:pathData="M58,40 L71,40 L71,33 Q71,29 75,32 L89,44 Q92,46 89,49 L75,61 Q71,64 71,59 L71,53 L58,53 Q52,53 52,47 Q52,40 58,40 Z" />
-    <!-- Audio waveform -->
-    <path
-        android:fillColor="#00D0F5"
-        android:pathData="M59,67 Q59,64 62,64 Q65,64 65,67 L65,78 Q65,81 62,81 Q59,81 59,78 Z M68,59 Q68,56 71,56 Q74,56 74,59 L74,84 Q74,87 71,87 Q68,87 68,84 Z M77,65 Q77,62 80,62 Q83,62 83,65 L83,79 Q83,82 80,82 Q77,82 77,79 Z M86,70 Q86,67 89,67 Q92,67 92,70 L92,75 Q92,78 89,78 Q86,78 86,75 Z" />
+        android:fillColor="#780024"
+        android:pathData="M19,82 C22,85 29,83 34,78 C34,82 32,86 28,88 C23,91 18,88 17,85 Z M57,81 C61,84 68,82 73,77 C73,81 71,85 67,87 C62,90 57,87 56,84 Z"/>
 </vector>
