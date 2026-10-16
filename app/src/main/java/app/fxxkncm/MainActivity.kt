@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.view.View
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
-import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -21,8 +20,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -50,7 +47,6 @@ import androidx.compose.material.icons.rounded.Output
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,7 +61,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text as MaterialText
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -250,10 +245,14 @@ private fun FxxkNcmApp() {
         else minute >= darkStart && minute < lightStart
     }
 
-    LaunchedEffect(themeMode, darkStart, lightStart, systemDark) {
-        while (true) {
-            updateScheduledTheme()
-            delay(60_000)
+    LaunchedEffect(themeMode, darkStart, lightStart) {
+        if (themeMode == ThemeMode.SCHEDULED) {
+            while (true) {
+                updateScheduledTheme()
+                delay(60_000)
+            }
+        } else {
+            scheduledDark = false
         }
     }
     val darkTheme = when (themeMode) {
@@ -616,11 +615,15 @@ private fun SettingsScreen(
 private fun formatTime(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
 
 private fun listNcmFiles(resolver: ContentResolver, treeUri: Uri): List<QueueItem> {
-    val result = mutableListOf<QueueItem>()
+    val result = ArrayList<QueueItem>()
     val visited = HashSet<String>()
+    val pending = java.util.ArrayDeque<String>()
+    pending.addLast(DocumentsContract.getTreeDocumentId(treeUri))
 
-    fun scanDirectory(directoryId: String) {
-        if (!visited.add(directoryId)) return
+    while (pending.isNotEmpty()) {
+        val directoryId = pending.removeLast()
+        if (!visited.add(directoryId)) continue
+
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, directoryId)
         resolver.query(
             childrenUri,
@@ -631,23 +634,22 @@ private fun listNcmFiles(resolver: ContentResolver, treeUri: Uri): List<QueueIte
             val nameColumn = cursor.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
             val mimeColumn = cursor.getColumnIndex(Document.COLUMN_MIME_TYPE)
             if (idColumn < 0 || nameColumn < 0) throw IOException("目录提供程序未返回必要字段")
+
             while (cursor.moveToNext()) {
                 val id = cursor.getString(idColumn) ?: continue
                 val name = cursor.getString(nameColumn) ?: continue
                 val mime = if (mimeColumn >= 0) cursor.getString(mimeColumn) else null
-                if (mime == Document.MIME_TYPE_DIR) {
-                    scanDirectory(id)
-                } else if (name.endsWith(".ncm", ignoreCase = true)) {
-                    result += QueueItem(DocumentsContract.buildDocumentUriUsingTree(treeUri, id), name)
+                when {
+                    mime == Document.MIME_TYPE_DIR -> pending.addLast(id)
+                    name.endsWith(".ncm", ignoreCase = true) ->
+                        result.add(QueueItem(DocumentsContract.buildDocumentUriUsingTree(treeUri, id), name))
                 }
             }
         } ?: throw IOException("无法读取目录，请确认目录访问权限")
     }
 
-    scanDirectory(DocumentsContract.getTreeDocumentId(treeUri))
     return result.sortedBy { it.name.lowercase() }
 }
-
 @Composable
 private fun HeroCard(fileCount: Int, outputReady: Boolean, progress: Float, isConverting: Boolean) {
     Card(shape = RoundedCornerShape(30.dp),

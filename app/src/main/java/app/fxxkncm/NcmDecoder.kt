@@ -83,6 +83,7 @@ object NcmDecoder {
         skipFully(source, imageLength.toLong())
 
         val keyBox = createKeyBox(keyMaterial)
+        val audioMask = createAudioMask(keyBox)
         var extension = if (metadata.contains("\"format\"") &&
             metadata.contains("flac", ignoreCase = true)) "flac" else "mp3"
         val buffer = ByteArray(BUFFER_SIZE)
@@ -93,13 +94,12 @@ object NcmDecoder {
             if (count < 0) break
             if (count == 0) continue
 
+            // The NCM mask repeats every 256 bytes. Precompute it once to keep
+            // the hot loop to an XOR and a small, wraparound index increment.
+            var maskIndex = ((audioOffset + 1L) and 0xff).toInt()
             for (i in 0 until count) {
-                // Use absolute stream position; this remains correct for any read chunk size.
-                val position = ((audioOffset + i + 1L) and 0xff).toInt()
-                val boxValue = keyBox[position].toInt() and 0xff
-                val maskIndex = (boxValue + (keyBox[(boxValue + position) and 0xff].toInt() and 0xff)) and 0xff
-                val mask = keyBox[maskIndex].toInt() and 0xff
-                buffer[i] = (buffer[i].toInt() xor mask).toByte()
+                buffer[i] = (buffer[i].toInt() xor audioMask[maskIndex].toInt()).toByte()
+                maskIndex = (maskIndex + 1) and 0xff
             }
             audioOffset += count
 
@@ -138,6 +138,12 @@ object NcmDecoder {
             keyIndex = (keyIndex + 1) % keyMaterial.size
         }
         return box
+    }
+
+    internal fun createAudioMask(keyBox: ByteArray): ByteArray = ByteArray(256) { position ->
+        val boxValue = keyBox[position].toInt() and 0xff
+        val second = keyBox[(boxValue + position) and 0xff].toInt() and 0xff
+        keyBox[(boxValue + second) and 0xff]
     }
 
     private fun xorBytes(data: ByteArray, mask: Int): ByteArray =
