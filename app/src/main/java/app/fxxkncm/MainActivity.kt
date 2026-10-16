@@ -159,7 +159,25 @@ private val translations = mapOf(
     "已选择保存位置" to listOf("已选择保存位置", "Output location selected", "已選擇儲存位置", "已選擇儲存位置"),
     "选择目录后，符合条件的 NCM 文件会自动加入队列。" to listOf("选择目录后，符合条件的 NCM 文件会自动加入队列。", "Choose a folder to add matching NCM files to the queue.", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。"),
     "完成" to listOf("完成", "Done", "完成", "完成"),
-    "返回" to listOf("返回", "Back", "返回", "返回")
+    "返回" to listOf("返回", "Back", "返回", "返回"),
+    "外观与语言" to listOf("外观与语言", "Appearance & language", "外觀與語言", "外觀與語言"),
+    "根据你的使用习惯自定义应用外观和显示语言。" to listOf("根据你的使用习惯自定义应用外观和显示语言。", "Customize the app's appearance and display language.", "依照使用習慣自訂應用程式外觀與顯示語言。", "依照使用習慣自訂應用程式外觀與顯示語言。"),
+    "颜色与主题" to listOf("颜色与主题", "Color & theme", "色彩與主題", "色彩與主題"),
+    "浅色、深色或跟随系统自动切换" to listOf("浅色、深色或跟随系统自动切换", "Light, dark, or follow system automatically", "淺色、深色或自動跟隨系統", "淺色、深色或自動跟隨系統"),
+    "自动跟随系统语言，也可在此手动指定" to listOf("自动跟随系统语言，也可在此手动指定", "Follow the system language or choose one manually", "自動跟隨系統語言，也可在此手動指定", "自動跟隨系統語言，也可在此手動指定"),
+    "Fxxk-NCM · 仅在本机处理音频文件" to listOf("Fxxk-NCM · 仅在本机处理音频文件", "Fxxk-NCM · Audio files are processed locally", "Fxxk-NCM · 僅在本機處理音訊檔案", "Fxxk-NCM · 僅在本機處理音訊檔案"),
+    "等待转换" to listOf("等待转换", "Waiting", "等待轉換", "等待轉換"),
+    "转换中" to listOf("转换中", "Converting", "轉換中", "轉換中"),
+    "已完成" to listOf("已完成", "Completed", "已完成", "已完成"),
+    "失败" to listOf("失败", "Failed", "失敗", "失敗"),
+    "选择输入目录，应用只会处理其中的 .ncm 文件。" to listOf("选择输入目录，应用只会处理其中的 .ncm 文件。", "Choose an input folder. Only .ncm files will be processed.", "選擇輸入資料夾，應用程式只會處理其中的 .ncm 檔案。", "選擇輸入資料夾，應用程式只會處理其中的 .ncm 檔案。"),
+    "正在扫描目录中的 NCM 文件…" to listOf("正在扫描目录中的 NCM 文件…", "Scanning for NCM files…", "正在掃描資料夾中的 NCM 檔案…", "正在掃描資料夾中的 NCM 檔案…"),
+    "该目录下没有 .ncm 文件；其他文件已自动跳过。" to listOf("该目录下没有 .ncm 文件；其他文件已自动跳过。", "No .ncm files found. Other files were skipped.", "此資料夾沒有 .ncm 檔案；其他檔案已自動略過。", "此資料夾沒有 .ncm 檔案；其他檔案已自動略過。"),
+    "扫描完成：找到" to listOf("扫描完成：找到", "Scan complete: found", "掃描完成：找到", "掃描完成：找到"),
+    "输出目录已设置。" to listOf("输出目录已设置。", "Output folder set.", "輸出資料夾已設定。", "輸出資料夾已設定。"),
+    "请先选择包含 NCM 文件的输入目录。" to listOf("请先选择包含 NCM 文件的输入目录。", "Choose an input folder containing NCM files first.", "請先選擇包含 NCM 檔案的輸入資料夾。", "請先選擇包含 NCM 檔案的輸入資料夾。"),
+    "请先选择输出目录。" to listOf("请先选择输出目录。", "Choose an output folder first.", "請先選擇輸出資料夾。", "請先選擇輸出資料夾。"),
+    "所有文件均在本机处理；目录扫描只筛选 .ncm，不会修改或删除其他文件。" to listOf("所有文件均在本机处理；目录扫描只筛选 .ncm，不会修改或删除其他文件。", "Files are processed locally. Only .ncm files are selected; other files are never changed or deleted.", "所有檔案均在本機處理；只會篩選 .ncm，不會修改或刪除其他檔案。", "所有檔案均在本機處理；只會篩選 .ncm，不會修改或刪除其他檔案。")
 )
 @Composable
 private fun Text(text: String, modifier: Modifier = Modifier,
