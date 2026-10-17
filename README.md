@@ -1,21 +1,68 @@
 # Fxxk-NCM
 
-A modern Android NCM audio converter built from a clean architecture with Kotlin and Jetpack Compose.
+一款面向 Android 手机的 NCM 音频转换工具，使用 Kotlin、Jetpack Compose 和 Material 3 构建。应用可扫描已授权目录中的 `.ncm` 文件，并将其批量转换为常见音频文件。
 
-> This repository is being bootstrapped. The first milestone is a buildable Android app with Storage Access Framework input/output selection and an independently testable NCM decoding core. NCM conversion must be validated against real files before being considered production-ready.
+## 功能特性
 
-## Goals
+- **扫描 NCM 文件**：递归扫描已选择的输入目录及其子目录，查找 `.ncm` 文件。
+- **启动自动扫描**：应用启动时自动重新扫描上次授权的输入目录。
+- **批量转换**：将扫描到的文件加入队列并执行转换。
+- **输入、输出目录分别记忆**：分别保存输入目录和输出目录的授权；重新打开应用后继续使用。
+- **系统文件选择器**：通过 Android Storage Access Framework（SAF）选择目录，不申请不必要的全盘存储权限。
+- **外观设置**：支持跟随系统、浅色、深色及定时主题选项。
+- **语言设置**：支持跟随系统、简体中文、繁体中文（香港）和英语。
+- **现代 Android 界面**：基于 Jetpack Compose 与 Material 3 构建。
 
-- Phone-first, adaptive UI inspired by Android 17 and Material 3 Expressive.
-- Choose one or more `.ncm` files and a destination folder through Android's system file picker.
-- Keep decoding logic independent from the UI and use streaming I/O to avoid loading entire audio files into memory.
-- Provide GitHub Actions CI to build a debug APK and upload it as an artifact.
-- Keep file access scoped; no broad storage permission is requested.
+## 系统要求
 
-## Build
+- Android 8.0（API 26）或更高版本。
+- 需要在系统目录选择器中授权输入目录和输出目录。
 
-Open this repository in Android Studio with JDK 17, or run `./gradlew assembleDebug` after the Gradle wrapper has been generated. GitHub Actions uses the Gradle setup action to build the project.
+## 使用方法
 
-## Current status
+1. 安装并打开应用。
+2. 首次使用时，选择包含 NCM 文件的输入目录，并按系统提示授予访问权限。
+3. 选择转换结果的输出目录，并授予访问权限。输入和输出目录分别保存。
+4. 应用会扫描输入目录及其子目录中的 `.ncm` 文件；之后每次启动时也会自动扫描上次授权的输入目录。
+5. 在文件队列中选择需要处理的文件并开始转换。
+6. 转换后的文件将保存到指定的输出目录。
 
-The first commit establishes the project foundation. Real-world NCM sample testing, metadata/tag preservation, cancellation, collision policies and release signing are follow-up tasks. Do not treat a CI build alone as proof that all NCM variants decode correctly.
+### 关于目录授权
+
+应用只能扫描用户通过系统文件选择器授权的目录及其可访问的子目录。若系统撤销了目录权限，或原目录无法访问，请重新选择相应目录。Android 不允许应用在未经授权的情况下静默访问整个共享存储空间。
+
+## 从源码构建
+
+### 环境要求
+
+- Android Studio（建议使用当前稳定版）
+- JDK 17
+- Android SDK
+
+在仓库根目录运行：
+
+```bash
+./gradlew assembleDebug
+```
+
+Windows PowerShell：
+
+```powershell
+.\gradlew.bat assembleDebug
+```
+
+GitHub Actions 工作流也会构建 APK，并按工作流配置上传构建产物。正式版应使用仓库已配置的长期发布签名密钥，以确保后续版本可以覆盖安装更新；请勿公开或提交签名密钥及密码。
+
+## 版本
+
+当前版本：**0.2.2**
+
+## 说明
+
+- 建议先使用少量文件验证转换结果，再处理大量文件。
+- NCM 文件的编码、元数据及封面信息可能因文件来源而异；请以实际转换结果为准。
+- CI 构建成功表示构建与配置的自动化检查通过，并不等于所有来源的 NCM 文件均已完成兼容性验证。
+
+## 许可证
+
+请以仓库中实际提供的许可证文件为准。
