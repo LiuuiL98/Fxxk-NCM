@@ -269,23 +269,73 @@ private fun Text(text: String, modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE, overflow: TextOverflow = TextOverflow.Clip) {
     val index = when (resolveLanguage(LocalAppLanguage.current)) { "en" -> 1; "hk" -> 2; else -> 0 }
     val translated = translations[text]?.get(index) ?: when {
-        text.startsWith("正在转换：") && index == 1 -> "Converting: " + text.substringAfter("：")
-        text.startsWith("正在转换：") && index in 2..3 -> "正在轉換：" + text.substringAfter("：")
+        text.startsWith("无法记住输入目录授权：") && index == 1 -> "Could not save input folder permission: " + text.substringAfter("：")
+        text.startsWith("无法记住输入目录授权：") && index == 2 -> "無法保存輸入資料夾授權：" + text.substringAfter("：")
+        text.startsWith("无法记住输出目录授权：") && index == 1 -> "Could not save output folder permission: " + text.substringAfter("：")
+        text.startsWith("无法记住输出目录授权：") && index == 2 -> "無法保存輸出資料夾授權：" + text.substringAfter("：")
         text.startsWith("扫描目录失败：") && index == 1 -> "Folder scan failed: " + text.substringAfter("：")
-        text.startsWith("扫描目录失败：") && index in 2..3 -> "掃描資料夾失敗：" + text.substringAfter("：")
-        text.startsWith("已扫描 · ") && index == 1 -> "Scanned · " + text.substringAfter("· ").replace(" 个 NCM 文件", " NCM files")
-        text.startsWith("已扫描 · ") && index in 2..3 -> "已掃描 · " + text.substringAfter("· ").replace(" 个 NCM 文件", " 個 NCM 檔案")
-        text.startsWith("扫描完成：找到 ") && index == 1 -> text.replace("扫描完成：找到 ", "Scan complete: found ").replace(" 个 NCM 文件，其他文件未加入队列。", " NCM files. Other files were skipped.")
-        text.startsWith("扫描完成：找到 ") && index in 2..3 -> text.replace("扫描完成：找到 ", "掃描完成：找到 ").replace(" 个 NCM 文件，其他文件未加入队列。", " 個 NCM 檔案，其他檔案未加入佇列。")
-        text.startsWith("转换结束：成功 ") && index == 1 -> text.replace("转换结束：成功 ", "Conversion finished: ").replace("。", " succeeded.")
-        text.startsWith("转换结束：成功 ") && index in 2..3 -> text.replace("转换结束：成功 ", "轉換完成：成功 ")
-        text.matches(Regex("\\d+ 个文件")) && index == 1 -> text.replace(" 个文件", " files")
-        text.matches(Regex("\\d+ 个文件")) && index in 2..3 -> text.replace(" 个文件", " 個檔案")
+        text.startsWith("扫描目录失败：") && index == 2 -> "掃描資料夾失敗：" + text.substringAfter("：")
+        text.startsWith("正在转换：") && index == 1 -> "Converting: " + text.substringAfter("：")
+        text.startsWith("正在转换：") && index == 2 -> "正在轉換：" + text.substringAfter("：")
+        text.startsWith("扫描完成：找到 ") && index == 1 -> {
+            val m = Regex("扫描完成：找到 (\\d+) 个 NCM 文件，已加入队列。").matchEntire(text)
+            if (m != null) "Scan complete: found " + m.groupValues[1] + " NCM files and added them to the queue." else text
+        }
+        text.startsWith("扫描完成：找到 ") && index == 2 -> {
+            val m = Regex("扫描完成：找到 (\\d+) 个 NCM 文件，已加入队列。").matchEntire(text)
+            if (m != null) "掃描完成：找到 " + m.groupValues[1] + " 個 NCM 檔案，已加入佇列。" else text
+        }
+        text.startsWith("转换结束：成功 ") && index == 1 -> {
+            val m = Regex("转换结束：成功 (\\d+) 个，失败 (\\d+) 个。").matchEntire(text)
+            if (m != null) "Conversion finished: " + m.groupValues[1] + " succeeded, " + m.groupValues[2] + " failed." else text
+        }
+        text.startsWith("转换结束：成功 ") && index == 2 -> {
+            val m = Regex("转换结束：成功 (\\d+) 个，失败 (\\d+) 个。").matchEntire(text)
+            if (m != null) "轉換完成：成功 " + m.groupValues[1] + " 個，失敗 " + m.groupValues[2] + " 個。" else text
+        }
+        Regex("(\\d+) 个文件 · 已选 (\\d+) 个").matches(text) && index == 1 -> {
+            val m = Regex("(\\d+) 个文件 · 已选 (\\d+) 个").matchEntire(text)!!
+            m.groupValues[1] + " files · " + m.groupValues[2] + " selected"
+        }
+        Regex("(\\d+) 个文件 · 已选 (\\d+) 个").matches(text) && index == 2 -> {
+            val m = Regex("(\\d+) 个文件 · 已选 (\\d+) 个").matchEntire(text)!!
+            m.groupValues[1] + " 個檔案 · 已選 " + m.groupValues[2] + " 個"
+        }
+        Regex("(\\d+) 个已选").matches(text) && index == 1 -> text.replace(" 个已选", " selected")
+        Regex("(\\d+) 个已选").matches(text) && index == 2 -> text.replace(" 个已选", " 個已選")
+        text.startsWith("查看文件列表（") && index == 1 -> "View files (" + text.substringAfter("（").replace("）", ")")
+        text.startsWith("查看文件列表（") && index == 2 -> "查看檔案列表（" + text.substringAfter("（")
+        text.startsWith("开始转换（") && index == 1 -> "Convert (" + text.substringAfter("（").replace("）", ")")
+        text.startsWith("开始转换（") && index == 2 -> "開始轉換（" + text.substringAfter("（")
+        text.startsWith("全部（") && index == 1 -> "All (" + text.substringAfter("（").replace("）", ")")
+        text.startsWith("已选择（") && index == 1 -> "Selected (" + text.substringAfter("（").replace("）", ")")
+        text.startsWith("已选择（") && index == 2 -> "已選取（" + text.substringAfter("（")
+        text.startsWith("已选择 ") && index == 1 -> "Selected " + text.substringAfter("已选择 ")
+        text.startsWith("已选择 ") && index == 2 -> "已選取 " + text.substringAfter("已选择 ")
+        text.startsWith("成功转换 ") && index == 1 -> text.replace("成功转换 ", "Successfully converted ")
+        text.startsWith("成功转换 ") && index == 2 -> text.replace("成功转换 ", "成功轉換 ")
+        text.contains(" 个文件 · ") && text.contains(" 个完成 · ") && index == 1 -> {
+            val m = Regex("(\\d+) 个文件 · (\\d+) 个完成 · (\\d+) 个失败").matchEntire(text)
+            if (m != null) m.groupValues[1] + " files · " + m.groupValues[2] + " completed · " + m.groupValues[3] + " failed" else text
+        }
+        text.contains(" 个文件 · ") && text.contains(" 个完成 · ") && index == 2 -> {
+            val m = Regex("(\\d+) 个文件 · (\\d+) 个完成 · (\\d+) 个失败").matchEntire(text)
+            if (m != null) m.groupValues[1] + " 個檔案 · " + m.groupValues[2] + " 個完成 · " + m.groupValues[3] + " 個失敗" else text
+        }
+        Regex("\\d+ 个文件").matches(text) && index == 1 -> text.replace(" 个文件", " files")
+        Regex("\\d+ 个文件").matches(text) && index == 2 -> text.replace(" 个文件", " 個檔案")
+        Regex("\\d+ 分 \\d+ 秒").matches(text) && index == 1 -> {
+            val m = Regex("(\\d+) 分 (\\d+) 秒").matchEntire(text)!!
+            m.groupValues[1] + " min " + m.groupValues[2] + " sec"
+        }
+        Regex("\\d+ 分 \\d+ 秒").matches(text) && index == 2 -> text.replace(" 分 ", " 分 ").replace(" 秒", " 秒")
+        Regex("\\d+ 秒").matches(text) && index == 1 -> text.replace(" 秒", " sec")
+        Regex("\\d+ 秒").matches(text) && index == 2 -> text
         text.endsWith("% 完成") && index == 1 -> text.replace("% 完成", "% complete")
         text.startsWith("切换为深色：") && index == 1 -> "Switch to dark: " + text.substringAfter("：")
-        text.startsWith("切换为深色：") && index in 2..3 -> "切換為深色：" + text.substringAfter("：")
+        text.startsWith("切换为深色：") && index == 2 -> "切換為深色：" + text.substringAfter("：")
         text.startsWith("切换为浅色：") && index == 1 -> "Switch to light: " + text.substringAfter("：")
-        text.startsWith("切换为浅色：") && index in 2..3 -> "切換為淺色：" + text.substringAfter("：")
+        text.startsWith("切换为浅色：") && index == 2 -> "切換為淺色：" + text.substringAfter("：")
         else -> text
     }
     MaterialText(translated, modifier = modifier, style = style, color = color,
