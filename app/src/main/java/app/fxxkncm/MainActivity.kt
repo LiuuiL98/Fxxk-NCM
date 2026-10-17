@@ -131,7 +131,7 @@ private enum class ThemeMode(val title: String) {
     SYSTEM("跟随系统"), LIGHT("浅色"), DARK("深色"), SCHEDULED("定时切换")
 }
 private enum class AppLanguage(val title: String) {
-    SYSTEM("跟随系统 / System default"), ZH_CN("简体中文（中国）"),
+    SYSTEM("跟随系统"), ZH_CN("简体中文（中国）"),
     EN_US("English (United States)"), ZH_HK("繁體中文（香港）")
 }
 private val LocalAppLanguage = staticCompositionLocalOf { AppLanguage.SYSTEM }
@@ -260,7 +260,16 @@ private val translations = mapOf(
     "关于" to listOf("关于", "About", "關於", "關於"),
     "Fxxk-NCM · 版本 0.2.3" to listOf("Fxxk-NCM · 版本 0.2.3", "Fxxk-NCM · Version 0.2.3", "Fxxk-NCM · 版本 0.2.3", "Fxxk-NCM · 版本 0.2.3"),
     "本地音频转换" to listOf("本地音频转换", "On-device audio conversion", "本機音訊轉換", "本機音訊轉換"),
-    "文件不会上传到网络；仅处理你选择的 NCM 文件。" to listOf("文件不会上传到网络；仅处理你选择的 NCM 文件。", "Files are not uploaded; only the NCM files you select are processed.", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。")
+    "文件不会上传到网络；仅处理你选择的 NCM 文件。" to listOf("文件不会上传到网络；仅处理你选择的 NCM 文件。", "Files are not uploaded; only the NCM files you select are processed.", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。"),
+    "全选" to listOf("全选", "Select all", "全選", "全選"),
+    "清除" to listOf("清除", "Clear selection", "清除選取", "清除選取"),
+    "转换完成" to listOf("转换完成", "Conversion complete", "轉換完成", "轉換完成"),
+    "目录提供程序未返回必要字段" to listOf("目录提供程序未返回必要字段", "The folder provider did not return required fields.", "資料夾提供者未傳回必要欄位", "資料夾提供者未傳回必要欄位"),
+    "无法读取目录，请确认目录访问权限" to listOf("无法读取目录，请确认目录访问权限", "Cannot read folder. Check folder access permissions.", "無法讀取資料夾，請確認資料夾存取權限", "無法讀取資料夾，請確認資料夾存取權限"),
+    "无法在所选目录创建输出文件" to listOf("无法在所选目录创建输出文件", "Cannot create an output file in the selected folder.", "無法在所選資料夾建立輸出檔案", "無法在所選資料夾建立輸出檔案"),
+    "无法读取输入文件" to listOf("无法读取输入文件", "Cannot read the input file.", "無法讀取輸入檔案", "無法讀取輸入檔案"),
+    "无法写入输出文件" to listOf("无法写入输出文件", "Cannot write the output file.", "無法寫入輸出檔案", "無法寫入輸出檔案"),
+    "请重新选择目录" to listOf("请重新选择目录", "Please select the folder again.", "請重新選擇資料夾", "請重新選擇資料夾")
 )
 @Composable
 private fun Text(text: String, modifier: Modifier = Modifier,
@@ -273,8 +282,8 @@ private fun Text(text: String, modifier: Modifier = Modifier,
         text.startsWith("无法记住输入目录授权：") && index == 2 -> "無法保存輸入資料夾授權：" + text.substringAfter("：")
         text.startsWith("无法记住输出目录授权：") && index == 1 -> "Could not save output folder permission: " + text.substringAfter("：")
         text.startsWith("无法记住输出目录授权：") && index == 2 -> "無法保存輸出資料夾授權：" + text.substringAfter("：")
-        text.startsWith("扫描目录失败：") && index == 1 -> "Folder scan failed: " + text.substringAfter("：")
-        text.startsWith("扫描目录失败：") && index == 2 -> "掃描資料夾失敗：" + text.substringAfter("：")
+        text.startsWith("扫描目录失败：") && index == 1 -> "Folder scan failed: " + text.substringAfter("：").replace("请重新选择目录", "please select the folder again")
+        text.startsWith("扫描目录失败：") && index == 2 -> "掃描資料夾失敗：" + text.substringAfter("：").replace("请重新选择目录", "請重新選擇資料夾")
         text.startsWith("正在转换：") && index == 1 -> "Converting: " + text.substringAfter("：")
         text.startsWith("正在转换：") && index == 2 -> "正在轉換：" + text.substringAfter("：")
         text.startsWith("扫描完成：找到 ") && index == 1 -> {
@@ -312,8 +321,16 @@ private fun Text(text: String, modifier: Modifier = Modifier,
         text.startsWith("已选择（") && index == 2 -> "已選取（" + text.substringAfter("（")
         text.startsWith("已选择 ") && index == 1 -> "Selected " + text.substringAfter("已选择 ")
         text.startsWith("已选择 ") && index == 2 -> "已選取 " + text.substringAfter("已选择 ")
-        text.startsWith("成功转换 ") && index == 1 -> text.replace("成功转换 ", "Successfully converted ")
-        text.startsWith("成功转换 ") && index == 2 -> text.replace("成功转换 ", "成功轉換 ")
+        text.startsWith("成功转换 ") && index == 1 -> {
+            val m = Regex("成功转换 (\\d+) / (\\d+) 个文件").matchEntire(text)
+            if (m != null) "Successfully converted " + m.groupValues[1] + " / " + m.groupValues[2] + " files"
+            else text.replace("成功转换 ", "Successfully converted ").replace(" 个文件", " files")
+        }
+        text.startsWith("成功转换 ") && index == 2 -> {
+            val m = Regex("成功转换 (\\d+) / (\\d+) 个文件").matchEntire(text)
+            if (m != null) "成功轉換 " + m.groupValues[1] + " / " + m.groupValues[2] + " 個檔案"
+            else text.replace("成功转换 ", "成功轉換 ").replace(" 个文件", " 個檔案")
+        }
         text.contains(" 个文件 · ") && text.contains(" 个完成 · ") && index == 1 -> {
             val m = Regex("(\\d+) 个文件 · (\\d+) 个完成 · (\\d+) 个失败").matchEntire(text)
             if (m != null) m.groupValues[1] + " files · " + m.groupValues[2] + " completed · " + m.groupValues[3] + " failed" else text
