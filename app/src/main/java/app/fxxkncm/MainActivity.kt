@@ -156,7 +156,7 @@ private val translations = mapOf(
     "选择包含 NCM 文件的文件夹" to listOf("选择包含 NCM 文件的文件夹", "Choose a folder containing NCM files", "選擇包含 NCM 檔案的資料夾", "選擇包含 NCM 檔案的資料夾"),
     "未设置保存位置" to listOf("未设置保存位置", "No output location selected", "尚未設定儲存位置", "尚未設定儲存位置"),
     "已选择保存位置" to listOf("已选择保存位置", "Output location selected", "已選擇儲存位置", "已選擇儲存位置"),
-    "选择目录后，符合条件的 NCM 文件会自动加入队列。" to listOf("选择目录后，符合条件的 NCM 文件会自动加入队列。", "Choose a folder to add matching NCM files to the queue.", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。"),
+    "首次请选择内部存储根目录；授权后每次启动自动扫描其中的 .ncm 文件。" to listOf("选择目录后，符合条件的 NCM 文件会自动加入队列。", "Choose a folder to add matching NCM files to the queue.", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。", "選擇資料夾後，符合條件的 NCM 檔案會自動加入佇列。"),
     "完成" to listOf("完成", "Done", "完成", "完成"),
     "返回" to listOf("返回", "Back", "返回", "返回"),
     "外观与语言" to listOf("外观与语言", "Appearance & language", "外觀與語言", "外觀與語言"),
@@ -223,7 +223,7 @@ private fun FxxkNcmApp() {
     var currentName by remember { mutableStateOf("") }
     var completed by remember { mutableStateOf(0) }
     var total by remember { mutableStateOf(0) }
-    var statusMessage by remember { mutableStateOf("选择输入目录，应用只会处理其中的 .ncm 文件。") }
+    var statusMessage by remember { mutableStateOf("首次请选择内部存储根目录；授权后每次启动自动扫描其中的 .ncm 文件。") }
     var showSettings by remember { mutableStateOf(false) }
     var languageMode by remember { mutableStateOf(runCatching { AppLanguage.valueOf(prefs.getString("language", "SYSTEM") ?: "SYSTEM") }.getOrDefault(AppLanguage.SYSTEM)) }
     var themeMode by remember { mutableStateOf(ThemeMode.valueOf(prefs.getString("mode", "SYSTEM") ?: "SYSTEM")) }
@@ -283,35 +283,74 @@ private fun FxxkNcmApp() {
 
     val inputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
-            inputTree = uri
-            pathPrefs.edit().putString("input_tree", uri.toString()).apply()
-            queue.clear()
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            scope.launch {
-                statusMessage = "正在扫描目录中的 NCM 文件…"
-                try {
-                    val found = withContext(Dispatchers.IO) { listNcmFiles(resolver, uri) }
-                    queue.addAll(found)
-                    statusMessage = if (found.isEmpty()) "该目录下没有 .ncm 文件；其他文件已自动跳过。"
-                        else "扫描完成：找到 ${found.size} 个 NCM 文件，其他文件未加入队列。"
-                } catch (e: Exception) {
-                    statusMessage = "扫描目录失败：${e.message ?: "请重新选择目录"}"
+            try {
+                resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                val hasReadGrant = resolver.persistedUriPermissions.any {
+                    it.uri == uri && it.isReadPermission
                 }
+                if (!hasReadGrant) throw SecurityException("系统未保留输入目录的读取授权")
+                pathPrefs.edit().putString("input_tree", uri.toString()).apply()
+                inputTree = uri
+            } catch (e: Exception) {
+                statusMessage = "无法记住输入目录授权，请重新选择目录：${e.message ?: "授权失败"}"
             }
         }
     }
     val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
-            outputTree = uri
-            pathPrefs.edit().putString("output_tree", uri.toString()).apply()
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
+            try {
+                resolver.takePersistableUriPermission(
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
+                val hasReadWriteGrant = resolver.persistedUriPermissions.any {
+                    it.uri == uri && it.isReadPermission && it.isWritePermission
+                }
+                if (!hasReadWriteGrant) throw SecurityException("系统未保留输出目录的读写授权")
+                pathPrefs.edit().putString("output_tree", uri.toString()).apply()
+                outputTree = uri
+                statusMessage = "输出目录已设置。"
+            } catch (e: Exception) {
+                statusMessage = "无法记住输出目录授权，请重新选择目录：${e.message ?: "授权失败"}"
             }
-            statusMessage = "输出目录已设置。"
+        }
+    }
+
+    // SAF permissions and saved folder URIs must survive activity/process restarts.
+    // Re-scan the independently saved input tree whenever the app starts or it changes.
+    LaunchedEffect(inputTree) {
+        val source = inputTree ?: return@LaunchedEffect
+        val hasReadGrant = resolver.persistedUriPermissions.any {
+            it.uri == source && it.isReadPermission
+        }
+        if (!hasReadGrant) {
+            inputTree = null
+            pathPrefs.edit().remove("input_tree").apply()
+            queue.clear()
+            statusMessage = "输入目录授权已失效，请重新选择内部存储根目录。"
+            return@LaunchedEffect
+        }
+
+        queue.clear()
+        statusMessage = "正在扫描目录中的 NCM 文件…"
+        try {
+            val found = withContext(Dispatchers.IO) { listNcmFiles(resolver, source) }
+            queue.addAll(found)
+            statusMessage = if (found.isEmpty()) "该目录下没有 .ncm 文件；其他文件已自动跳过。"
+                else "扫描完成：找到 ${found.size} 个 NCM 文件，其他文件未加入队列。"
+        } catch (e: Exception) {
+            statusMessage = "扫描目录失败：${e.message ?: "请重新选择目录"}"
+        }
+    }
+
+    LaunchedEffect(outputTree) {
+        val target = outputTree ?: return@LaunchedEffect
+        val hasReadWriteGrant = resolver.persistedUriPermissions.any {
+            it.uri == target && it.isReadPermission && it.isWritePermission
+        }
+        if (!hasReadWriteGrant) {
+            outputTree = null
+            pathPrefs.edit().remove("output_tree").apply()
+            statusMessage = "输出目录授权已失效，请重新选择输出目录。"
         }
     }
 
