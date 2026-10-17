@@ -47,7 +47,7 @@ class AudioMetadataWriterTest {
         assertEquals(6, lastType)
         val rest = result.copyOfRange(pos, result.size)
         assertTrue(rest.contentEquals(byteArrayOf(0xFF.toByte(), 0xF8.toByte(), 0xAA.toByte(), 0xBB.toByte())))
-        val content = result.toString(Charsets.ISO_8859_1)
+        val content = result.toString(Charsets.UTF_8)
         assertTrue(content.contains("TITLE=着迷 (Fascination)"))
         assertTrue(content.contains("ARTIST=迷心"))
         assertTrue(content.contains("ALBUM=都市金阁寺"))
