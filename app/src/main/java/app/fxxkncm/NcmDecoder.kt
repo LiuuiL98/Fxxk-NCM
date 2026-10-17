@@ -80,15 +80,24 @@ object NcmDecoder {
         readExact(source, 5)
 
         val imageLength = readLength(source, MAX_IMAGE_BYTES, "封面数据")
-        skipFully(source, imageLength.toLong())
+        // Artwork is a separate field in NCM, not part of the decrypted audio stream.
+        // Keep reasonably sized images in memory for embedding in the output tags.
+        val coverBytes = if (imageLength in 1..MAX_EMBEDDED_COVER_BYTES) {
+            readExact(source, imageLength)
+        } else {
+            skipFully(source, imageLength.toLong())
+            ByteArray(0)
+        }
+        val audioTags = parseNcmAudioTags(metadata.ifBlank { null }, coverBytes)
 
         val keyBox = createKeyBox(keyMaterial)
         val audioMask = createAudioMask(keyBox)
-        var extension = if (metadata.contains("\"format\"") &&
+        var extension = if (metadata.contains("\\"format\\"") &&
             metadata.contains("flac", ignoreCase = true)) "flac" else "mp3"
         val buffer = ByteArray(BUFFER_SIZE)
         var firstChunk = true
         var audioOffset = 0L
+        var taggedOutput: OutputStream? = null
         while (true) {
             val count = source.read(buffer)
             if (count < 0) break
@@ -117,12 +126,23 @@ object NcmDecoder {
                 } else {
                     throw IllegalArgumentException("NCM 音频解密后文件头无法识别，密钥或文件结构可能异常")
                 }
+                taggedOutput = if (audioTags?.hasAnyTags == true) {
+                    when (extension) {
+                        "flac" -> FlacMetadataOutputStream(output, audioTags)
+                        "mp3" -> Mp3MetadataOutputStream(output, audioTags)
+                        else -> null
+                    }
+                } else null
                 firstChunk = false
             }
-            output.write(buffer, 0, count)
+            (taggedOutput ?: output).write(buffer, 0, count)
         }
         if (audioOffset == 0L) throw IllegalArgumentException("NCM 文件不包含音频数据")
-        output.flush()
+        when (val writer = taggedOutput) {
+            is FlacMetadataOutputStream -> writer.finish()
+            is Mp3MetadataOutputStream -> writer.finish()
+            else -> output.flush()
+        }
         return Result(extension, metadata.ifBlank { null })
     }
 
@@ -220,5 +240,6 @@ object NcmDecoder {
     private const val BUFFER_SIZE = 64 * 1024
     private const val MAX_METADATA_BYTES = 16 * 1024 * 1024
     private const val MAX_IMAGE_BYTES = 64 * 1024 * 1024
+    private const val MAX_EMBEDDED_COVER_BYTES = 16 * 1024 * 1024
     private const val MAX_KEY_BYTES = 1024 * 1024
 }
