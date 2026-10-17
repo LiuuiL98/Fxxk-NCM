@@ -82,6 +82,57 @@ jobs:
           "$ZIPALIGN" -c -v 4 "$OUTPUT_APK"
           sha256sum "$OUTPUT_APK"
           ls -lh "$OUTPUT_APK"
+      - name: Sign permanent Release APK when repository secrets are configured
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$RELEASE_KEYSTORE_BASE64" || -z "$RELEASE_KEYSTORE_PASSWORD" || -z "$RELEASE_KEY_ALIAS" || -z "$RELEASE_KEY_PASSWORD" ]]; then
+            echo "::notice::Permanent Release signing skipped because one or more RELEASE_* repository secrets are not configured."
+            exit 0
+          fi
+
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/.android/sdk}}"
+          BUILD_TOOLS="$(find "$SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\\n' | sort -V | tail -n 1)"
+          APKSIGNER="$SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner"
+          ZIPALIGN="$SDK_ROOT/build-tools/$BUILD_TOOLS/zipalign"
+          INPUT_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          KEY_DIR="$RUNNER_TEMP/fxxkncm-release-signing"
+          KEYSTORE="$KEY_DIR/fxxkncm-release.jks"
+          ALIGNED_APK="app/build/outputs/apk/release/app-release-permanent-aligned.apk"
+          OUTPUT_APK="app/build/outputs/apk/release/Fxxk-NCM-0.2.1-release-permanent-signed.apk"
+
+          test -x "$APKSIGNER"
+          test -x "$ZIPALIGN"
+          test -f "$INPUT_APK"
+          mkdir -p "$KEY_DIR"
+          chmod 700 "$KEY_DIR"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          chmod 600 "$KEYSTORE"
+
+          "$ZIPALIGN" -p -f 4 "$INPUT_APK" "$ALIGNED_APK"
+          "$APKSIGNER" sign \\
+            --ks "$KEYSTORE" \\
+            --ks-key-alias "$RELEASE_KEY_ALIAS" \\
+            --ks-pass env:RELEASE_KEYSTORE_PASSWORD \\
+            --key-pass env:RELEASE_KEY_PASSWORD \\
+            --v1-signing-enabled true \\
+            --v2-signing-enabled true \\
+            --v3-signing-enabled true \\
+            --out "$OUTPUT_APK" \\
+            "$ALIGNED_APK"
+
+          "$APKSIGNER" verify --verbose --print-certs "$OUTPUT_APK"
+          "$ZIPALIGN" -c -v 4 "$OUTPUT_APK"
+          sha256sum "$OUTPUT_APK"
+          ls -lh "$OUTPUT_APK"
+          rm -f "$KEYSTORE"
+          rmdir "$KEY_DIR"
+
       - name: Report APK sizes
         run: |
           ls -lh app/build/outputs/apk/debug/app-debug.apk
@@ -104,3 +155,10 @@ jobs:
           name: Fxxk-NCM-release-debug-signed-diagnostic
           path: app/build/outputs/apk/release/Fxxk-NCM-0.2.1-release-debug-signed.apk
           if-no-files-found: error
+
+      - name: Upload permanent signed Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fxxk-NCM-release-permanent-signed
+          path: app/build/outputs/apk/release/Fxxk-NCM-0.2.1-release-permanent-signed.apk
+          if-no-files-found: ignore
