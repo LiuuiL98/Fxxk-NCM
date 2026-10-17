@@ -258,7 +258,7 @@ private val translations = mapOf(
     "选择应用界面的显示语言" to listOf("选择应用界面的显示语言", "Choose the app display language", "選擇應用程式介面語言", "選擇應用程式介面語言"),
     "显示语言" to listOf("显示语言", "Display language", "顯示語言", "顯示語言"),
     "关于" to listOf("关于", "About", "關於", "關於"),
-    "Fxxk-NCM · 版本 0.2.4" to listOf("Fxxk-NCM · 版本 0.2.4", "Fxxk-NCM · Version 0.2.4", "Fxxk-NCM · 版本 0.2.4", "Fxxk-NCM · 版本 0.2.4"),
+    "Fxxk-NCM · 版本 0.2.5" to listOf("Fxxk-NCM · 版本 0.2.5", "Fxxk-NCM · Version 0.2.5", "Fxxk-NCM · 版本 0.2.5", "Fxxk-NCM · 版本 0.2.5"),
     "本地音频转换" to listOf("本地音频转换", "On-device audio conversion", "本機音訊轉換", "本機音訊轉換"),
     "文件不会上传到网络；仅处理你选择的 NCM 文件。" to listOf("文件不会上传到网络；仅处理你选择的 NCM 文件。", "Files are not uploaded; only the NCM files you select are processed.", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。"),
     "全选" to listOf("全选", "Select all", "全選", "全選"),
@@ -967,7 +967,7 @@ private fun SettingsScreen(
             }
         }
         item {
-            SettingsGroup("关于", "Fxxk-NCM · 版本 0.2.4") {
+            SettingsGroup("关于", "Fxxk-NCM · 版本 0.2.5") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Info, null, tint = MaterialTheme.colorScheme.primary); Spacer(Modifier.size(10.dp))
                     Column {
