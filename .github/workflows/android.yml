@@ -59,7 +59,7 @@ jobs:
           DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
           INPUT_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
           ALIGNED_APK="app/build/outputs/apk/release/app-release-aligned.apk"
-          OUTPUT_APK="app/build/outputs/apk/release/Fxxk-NCM-0.2.4-release-debug-signed.apk"
+          OUTPUT_APK="app/build/outputs/apk/release/Fxxk-NCM-0.2.5-release-debug-signed.apk"
 
           test -x "$APKSIGNER"
           test -x "$ZIPALIGN"
@@ -104,7 +104,7 @@ jobs:
           KEY_DIR="$RUNNER_TEMP/fxxkncm-release-signing"
           KEYSTORE="$KEY_DIR/fxxkncm-release.jks"
           ALIGNED_APK="app/build/outputs/apk/release/app-release-permanent-aligned.apk"
-          OUTPUT_APK="app/build/outputs/apk/release/Fxxk-NCM-0.2.4-release-permanent-signed.apk"
+          OUTPUT_APK="app/build/outputs/apk/release/Fxxk-NCM-0.2.5-release-permanent-signed.apk"
 
           test -x "$APKSIGNER"
           test -x "$ZIPALIGN"
@@ -153,12 +153,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Fxxk-NCM-release-debug-signed-diagnostic
-          path: app/build/outputs/apk/release/Fxxk-NCM-0.2.4-release-debug-signed.apk
+          path: app/build/outputs/apk/release/Fxxk-NCM-0.2.5-release-debug-signed.apk
           if-no-files-found: error
 
       - name: Upload permanent signed Release APK
         uses: actions/upload-artifact@v4
         with:
           name: Fxxk-NCM-release-permanent-signed
-          path: app/build/outputs/apk/release/Fxxk-NCM-0.2.4-release-permanent-signed.apk
+          path: app/build/outputs/apk/release/Fxxk-NCM-0.2.5-release-permanent-signed.apk
           if-no-files-found: ignore
