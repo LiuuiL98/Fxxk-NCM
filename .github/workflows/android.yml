@@ -21,6 +21,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -31,21 +35,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
-          if [[ -z "$SDK_ROOT" ]]; then
-            echo "ANDROID_HOME/ANDROID_SDK_ROOT is not set"
-            exit 1
-          fi
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/.android/sdk}}"
           BUILD_TOOLS="$(find "$SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)"
           APKSIGNER="$SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner"
+          ZIPALIGN="$SDK_ROOT/build-tools/$BUILD_TOOLS/zipalign"
           DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
           INPUT_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED_APK="app/build/outputs/apk/release/app-release-aligned.apk"
           OUTPUT_APK="app/build/outputs/apk/release/Fxxk-NCM-0.2.1-release-debug-signed.apk"
 
           test -x "$APKSIGNER"
+          test -x "$ZIPALIGN"
           test -f "$DEBUG_KEYSTORE"
           test -f "$INPUT_APK"
 
+          "$ZIPALIGN" -p -f 4 "$INPUT_APK" "$ALIGNED_APK"
           "$APKSIGNER" sign \
             --ks "$DEBUG_KEYSTORE" \
             --ks-key-alias androiddebugkey \
@@ -55,10 +59,10 @@ jobs:
             --v2-signing-enabled true \
             --v3-signing-enabled true \
             --out "$OUTPUT_APK" \
-            "$INPUT_APK"
+            "$ALIGNED_APK"
 
           "$APKSIGNER" verify --verbose --print-certs "$OUTPUT_APK"
-          "$SDK_ROOT/build-tools/$BUILD_TOOLS/zipalign" -c -v 4 "$OUTPUT_APK"
+          "$ZIPALIGN" -c -v 4 "$OUTPUT_APK"
           sha256sum "$OUTPUT_APK"
           ls -lh "$OUTPUT_APK"
       - name: Report APK sizes
