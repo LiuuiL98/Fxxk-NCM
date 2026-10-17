@@ -92,7 +92,7 @@ object NcmDecoder {
 
         val keyBox = createKeyBox(keyMaterial)
         val audioMask = createAudioMask(keyBox)
-        var extension = if (metadata.contains("\\"format\\"") &&
+        var extension = if (metadata.contains("\"format\"") &&
             metadata.contains("flac", ignoreCase = true)) "flac" else "mp3"
         val buffer = ByteArray(BUFFER_SIZE)
         var firstChunk = true
