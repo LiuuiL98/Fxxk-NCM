@@ -265,6 +265,8 @@ private val translations = mapOf(
     "清除" to listOf("清除", "Clear selection", "清除選取", "清除選取"),
     "转换成功后删除原 NCM" to listOf("转换成功后删除原 NCM", "Delete original NCM after successful conversion", "轉換成功後刪除原始 NCM", "轉換成功後刪除原始 NCM"),
     "仅在音频转换成功后删除对应源文件；默认关闭" to listOf("仅在音频转换成功后删除对应源文件；默认关闭", "Delete the source file only after audio conversion succeeds. Off by default.", "僅在音訊轉換成功後刪除對應來源檔案；預設關閉", "僅在音訊轉換成功後刪除對應來源檔案；預設關閉"),
+    "输入目录只有读取权限，已关闭转换后删除原 NCM。请重新选择可读写的输入目录后重试。" to listOf("输入目录只有读取权限，已关闭转换后删除原 NCM。请重新选择可读写的输入目录后重试。", "The input folder is read-only, so source deletion was turned off. Choose a readable and writable input folder to use this option.", "輸入資料夾只有讀取權限，已關閉轉換後刪除原始 NCM。請重新選擇可讀寫的輸入資料夾後重試。", "輸入資料夾只有讀取權限，已關閉轉換後刪除原始 NCM。請重新選擇可讀寫的輸入資料夾後重試。"),
+    "请重新选择输入目录并授予读写权限后，才能启用转换成功后删除原 NCM。" to listOf("请重新选择输入目录并授予读写权限后，才能启用转换成功后删除原 NCM。", "To enable source deletion after conversion, reselect the input folder and grant read/write access.", "請重新選擇輸入資料夾並授予讀寫權限後，才能啟用轉換成功後刪除原始 NCM。", "請重新選擇輸入資料夾並授予讀寫權限後，才能啟用轉換成功後刪除原始 NCM。"),
     "转换成功，但原 NCM 删除失败" to listOf("转换成功，但原 NCM 删除失败", "Conversion succeeded, but the original NCM could not be deleted", "轉換成功，但原始 NCM 刪除失敗", "轉換成功，但原始 NCM 刪除失敗"),
     "转换完成" to listOf("转换完成", "Conversion complete", "轉換完成", "轉換完成"),
     "目录提供程序未返回必要字段" to listOf("目录提供程序未返回必要字段", "The folder provider did not return required fields.", "資料夾提供者未傳回必要欄位", "資料夾提供者未傳回必要欄位"),
@@ -356,6 +358,10 @@ private fun Text(text: String, modifier: Modifier = Modifier,
         text.startsWith("切换为深色：") && index == 2 -> "切換為深色：" + text.substringAfter("：")
         text.startsWith("切换为浅色：") && index == 1 -> "Switch to light: " + text.substringAfter("：")
         text.startsWith("切换为浅色：") && index == 2 -> "切換為淺色：" + text.substringAfter("：")
+        text.endsWith("（转换成功，但原 NCM 删除失败）") && index == 1 ->
+            text.removeSuffix("（转换成功，但原 NCM 删除失败）") + " (conversion succeeded, but the source NCM file could not be deleted)"
+        text.endsWith("（转换成功，但原 NCM 删除失败）") && index == 2 ->
+            text.removeSuffix("（转换成功，但原 NCM 删除失败）") + "（轉換成功，但無法刪除原始 NCM 檔案）"
         else -> text
     }
     MaterialText(translated, modifier = modifier, style = style, color = color,
@@ -442,11 +448,30 @@ private fun FxxkNcmApp() {
 
     val inputPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) try {
-            resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            val granted = resolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
-            if (!granted) throw SecurityException("系统未保留输入目录读取授权")
+            // Persist read access for scanning and write access for the optional source-file deletion.
+            var hasWriteGrant = false
+            try {
+                resolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                hasWriteGrant = resolver.persistedUriPermissions.any {
+                    it.uri == uri && it.isReadPermission && it.isWritePermission
+                }
+            } catch (_: SecurityException) {
+                // Some document providers only grant read access; scanning must still work.
+                runCatching {
+                    resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            }
+            val hasReadGrant = resolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+            if (!hasReadGrant) throw SecurityException("系统未保留输入目录读取授权")
             pathPrefs.edit().putString("input_tree", uri.toString()).apply()
             inputTree = uri
+            if (deleteOriginalAfterSuccess && !hasWriteGrant) {
+                deleteOriginalAfterSuccess = false
+                prefs.edit().putBoolean("delete_original_after_success", false).apply()
+                statusMessage = "输入目录只有读取权限，已关闭转换后删除原 NCM。请重新选择可读写的输入目录后重试。"
+            }
             scanRequest++
         } catch (e: Exception) { statusMessage = "无法记住输入目录授权：" + (e.message ?: "授权失败") }
     }
@@ -622,7 +647,17 @@ private fun FxxkNcmApp() {
                         darkStart = darkStart, lightStart = lightStart, autoScan = autoScan, dynamicColor = dynamicColor,
                         deleteOriginalAfterSuccess = deleteOriginalAfterSuccess,
                         onAutoScanChange = { value -> autoScan = value; prefs.edit().putBoolean("auto_scan", value).apply(); if (value) scanRequest++ },
-                        onDeleteOriginalAfterSuccessChange = { value -> deleteOriginalAfterSuccess = value; prefs.edit().putBoolean("delete_original_after_success", value).apply() },
+                        onDeleteOriginalAfterSuccessChange = { value ->
+                            val hasWriteGrant = inputTree?.let { uri ->
+                                resolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission && it.isWritePermission }
+                            } ?: true
+                            if (value && !hasWriteGrant) {
+                                statusMessage = "请重新选择输入目录并授予读写权限后，才能启用转换成功后删除原 NCM。"
+                            } else {
+                                deleteOriginalAfterSuccess = value
+                                prefs.edit().putBoolean("delete_original_after_success", value).apply()
+                            }
+                        },
                         onDynamicColorChange = { value -> dynamicColor = value; prefs.edit().putBoolean("dynamic_color", value).apply() },
                         onThemeChange = { themeMode = it; persistTheme() },
                         onLanguageChange = { languageMode = it; prefs.edit().putString("language", it.name).apply() },
