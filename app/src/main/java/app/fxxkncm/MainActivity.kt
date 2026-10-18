@@ -263,6 +263,9 @@ private val translations = mapOf(
     "文件不会上传到网络；仅处理你选择的 NCM 文件。" to listOf("文件不会上传到网络；仅处理你选择的 NCM 文件。", "Files are not uploaded; only the NCM files you select are processed.", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。", "檔案不會上傳至網路；只會處理你選取的 NCM 檔案。"),
     "全选" to listOf("全选", "Select all", "全選", "全選"),
     "清除" to listOf("清除", "Clear selection", "清除選取", "清除選取"),
+    "转换成功后删除原 NCM" to listOf("转换成功后删除原 NCM", "Delete original NCM after successful conversion", "轉換成功後刪除原始 NCM", "轉換成功後刪除原始 NCM"),
+    "仅在音频转换成功后删除对应源文件；默认关闭" to listOf("仅在音频转换成功后删除对应源文件；默认关闭", "Delete the source file only after audio conversion succeeds. Off by default.", "僅在音訊轉換成功後刪除對應來源檔案；預設關閉", "僅在音訊轉換成功後刪除對應來源檔案；預設關閉"),
+    "转换成功，但原 NCM 删除失败" to listOf("转换成功，但原 NCM 删除失败", "Conversion succeeded, but the original NCM could not be deleted", "轉換成功，但原始 NCM 刪除失敗", "轉換成功，但原始 NCM 刪除失敗"),
     "转换完成" to listOf("转换完成", "Conversion complete", "轉換完成", "轉換完成"),
     "目录提供程序未返回必要字段" to listOf("目录提供程序未返回必要字段", "The folder provider did not return required fields.", "資料夾提供者未傳回必要欄位", "資料夾提供者未傳回必要欄位"),
     "无法读取目录，请确认目录访问权限" to listOf("无法读取目录，请确认目录访问权限", "Cannot read folder. Check folder access permissions.", "無法讀取資料夾，請確認資料夾存取權限", "無法讀取資料夾，請確認資料夾存取權限"),
@@ -387,6 +390,7 @@ private fun FxxkNcmApp() {
     var scanRequest by remember { mutableStateOf(0) }
     var consumedScanRequest by remember { mutableStateOf(0) }
     var autoScan by remember { mutableStateOf(prefs.getBoolean("auto_scan", true)) }
+    var deleteOriginalAfterSuccess by remember { mutableStateOf(prefs.getBoolean("delete_original_after_success", false)) }
     var dynamicColor by remember { mutableStateOf(prefs.getBoolean("dynamic_color", true)) }
     var languageMode by remember { mutableStateOf(runCatching { AppLanguage.valueOf(prefs.getString("language", "SYSTEM") ?: "SYSTEM") }.getOrDefault(AppLanguage.SYSTEM)) }
     var themeMode by remember { mutableStateOf(runCatching { ThemeMode.valueOf(prefs.getString("mode", "SYSTEM") ?: "SYSTEM") }.getOrDefault(ThemeMode.SYSTEM)) }
@@ -504,7 +508,14 @@ private fun FxxkNcmApp() {
                 if (index < 0) continue
                 queue[index] = task.copy(status = "转换中", detail = null)
                 try {
-                    val outputName = withContext(Dispatchers.IO) { convertOne(resolver, task.uri, target, task.name) }
+                    val outputName = withContext(Dispatchers.IO) {
+                        val convertedName = convertOne(resolver, task.uri, target, task.name)
+                        if (deleteOriginalAfterSuccess) {
+                            val deleted = runCatching { DocumentsContract.deleteDocument(resolver, task.uri) }.getOrDefault(false)
+                            if (deleted) convertedName
+                            else "$convertedName（转换成功，但原 NCM 删除失败）"
+                        } else convertedName
+                    }
                     queue[index] = task.copy(status = "已完成", detail = outputName); successCount++
                 } catch (e: Exception) {
                     queue[index] = task.copy(status = "失败", detail = e.message ?: "未知错误"); failureCount++
@@ -609,7 +620,9 @@ private fun FxxkNcmApp() {
                     MainTab.SETTINGS -> SettingsScreen(
                         modifier = body, themeMode = themeMode, languageMode = languageMode,
                         darkStart = darkStart, lightStart = lightStart, autoScan = autoScan, dynamicColor = dynamicColor,
+                        deleteOriginalAfterSuccess = deleteOriginalAfterSuccess,
                         onAutoScanChange = { value -> autoScan = value; prefs.edit().putBoolean("auto_scan", value).apply(); if (value) scanRequest++ },
+                        onDeleteOriginalAfterSuccessChange = { value -> deleteOriginalAfterSuccess = value; prefs.edit().putBoolean("delete_original_after_success", value).apply() },
                         onDynamicColorChange = { value -> dynamicColor = value; prefs.edit().putBoolean("dynamic_color", value).apply() },
                         onThemeChange = { themeMode = it; persistTheme() },
                         onLanguageChange = { languageMode = it; prefs.edit().putString("language", it.name).apply() },
@@ -896,7 +909,8 @@ private fun EmptyState(modifier: Modifier, title: String, subtitle: String) {
 @Composable
 private fun SettingsScreen(
     modifier: Modifier, themeMode: ThemeMode, languageMode: AppLanguage, darkStart: Int, lightStart: Int,
-    autoScan: Boolean, dynamicColor: Boolean, onAutoScanChange: (Boolean) -> Unit, onDynamicColorChange: (Boolean) -> Unit,
+    autoScan: Boolean, dynamicColor: Boolean, deleteOriginalAfterSuccess: Boolean,
+    onAutoScanChange: (Boolean) -> Unit, onDeleteOriginalAfterSuccessChange: (Boolean) -> Unit, onDynamicColorChange: (Boolean) -> Unit,
     onThemeChange: (ThemeMode) -> Unit, onLanguageChange: (AppLanguage) -> Unit,
     onDarkStartChange: (Int) -> Unit, onLightStartChange: (Int) -> Unit
 ) {
@@ -913,6 +927,8 @@ private fun SettingsScreen(
         item {
             SettingsGroup("目录与扫描", "目录授权会分别保存") {
                 SettingSwitchRow(Icons.Rounded.Refresh, "启动时自动扫描", "每次打开应用时扫描上次授权的输入目录", autoScan, onAutoScanChange)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SettingSwitchRow(Icons.Rounded.Warning, "转换成功后删除原 NCM", "仅在音频转换成功后删除对应源文件；默认关闭", deleteOriginalAfterSuccess, onDeleteOriginalAfterSuccessChange)
             }
         }
         item {
